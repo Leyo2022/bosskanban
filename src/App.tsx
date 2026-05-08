@@ -58,52 +58,92 @@ interface Task {
 const INITIAL_TASKS: Task[] = [
   {
     id: 'task-1',
-    name: '主角高模雕刻',
+    name: '主角雕刻 - 面部表情细节 (Day 1)',
     assignee: { name: '陈晓东', avatar: 'https://i.pravatar.cc/150?u=alex' },
     status: '进行中',
     priority: '高',
-    deadline: '2026-05-07T18:00:00Z', // Overdue
-    description: '完成主角面部肌肉结构和表情融合变形细节雕刻。',
+    deadline: '2026-05-07T18:00:00Z',
+    description: '子任务：完成嘴角与眼角皱纹的高模细节。需支持后续表情融合。',
+    phase: '角色制作'
+  },
+  {
+    id: 'task-6',
+    name: '反派拓扑 - 关节区域重布线',
+    assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
+    status: '进行中',
+    priority: '高',
+    deadline: '2026-05-07T14:00:00Z',
+    description: '子任务：修复膝关节处极点布线，确保形变伸缩比。',
+    phase: '角色制作'
+  },
+  {
+    id: 'task-7',
+    name: '资产自检 - 命名审计',
+    assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
+    status: '待处理',
+    priority: '低',
+    deadline: '2026-05-07T10:00:00Z',
+    description: '子任务：核对所有UDIM象限命名规范。',
     phase: '角色制作'
   },
   {
     id: 'task-2',
-    name: '次要角色拓扑优化',
+    name: '次要角色拓扑 - 肢体优化',
     assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
     status: '待处理',
     priority: '中',
-    deadline: '2026-05-08T17:00:00Z', // Today
-    description: '在保留剪影细节的同时，为动画优化网格结构。',
+    deadline: '2026-05-08T17:00:00Z',
+    description: '子任务：优化网格结构以减少动画渲染开销。',
     phase: '角色制作'
   },
   {
     id: 'task-3',
-    name: '反派角色-UV拆分',
+    name: '反派UV - UDIM象限展开',
     assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
     status: '进行中',
     priority: '高',
-    deadline: '2026-05-08T20:00:00Z', // Today
-    description: '为8K纹理绘制创建无重叠的UV布局。',
+    deadline: '2026-05-08T20:00:00Z',
+    description: '子任务：展开前2个UV象限，满足8K绘制精度。',
     phase: '角色制作'
   },
   {
     id: 'task-4',
-    name: '毛发理算仿真测试',
+    name: '毛发理算 - 物理动力学调优',
     assignee: { name: '王小云', avatar: 'https://i.pravatar.cc/150?u=emily' },
     status: '进行中',
     priority: '低',
-    deadline: '2026-05-08T16:00:00Z', // Today
-    description: '使用XGen测试步行循环中的动态毛发物理效果。',
+    deadline: '2026-05-08T16:00:00Z',
+    description: '子任务：优化步行模式下的长发遮蔽与碰撞。',
+    phase: '角色制作'
+  },
+  {
+    id: 'task-8',
+    name: '道具B贴图 - 基础纹理层',
+    assignee: { name: '陈晓东', avatar: 'https://i.pravatar.cc/150?u=alex' },
+    status: '待处理',
+    priority: '高',
+    deadline: '2026-05-08T22:00:00Z',
+    description: '子任务：建立Substance智能材质球基础属性。',
     phase: '角色制作'
   },
   {
     id: 'task-5',
-    name: '主角模型贴图烘培',
+    name: '主角贴图 - 法线烘培校对',
     assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
     status: '已完成',
     priority: '中',
     deadline: '2026-05-08T10:00:00Z',
-    description: '烘培法线、AO和曲率贴图。',
+    description: '子任务：烘培法线贴图并核对黑边与硬边。',
+    phase: '角色制作'
+  },
+  {
+    id: 'task-9',
+    name: '资产打包 - 版本提交 0.2',
+    assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
+    status: '已完成',
+    priority: '低',
+    deadline: '2026-05-08T09:00:00Z',
+    description: '子任务：打包角色资产并上传至Shotgrid预览节点。',
     phase: '角色制作'
   }
 ];
@@ -190,24 +230,35 @@ const TaskCard = ({ task, index }: TaskCardProps) => {
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [isReady, setIsReady] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<Priority | 'All'>('All');
 
   // Fix for React Beautiful Dnd strict mode
   useEffect(() => {
     setIsReady(true);
   }, []);
 
-  const overdueTasks = tasks.filter(t => 
+  const filteredTasks = tasks.filter(t => {
+    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         t.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesPriority = priorityFilter === 'All' || t.priority === priorityFilter;
+    return matchesSearch && matchesPriority;
+  });
+
+  const overdueTasks = filteredTasks.filter(t => 
     isPast(new Date(t.deadline)) && 
     !isToday(new Date(t.deadline)) && 
     t.status !== '已完成'
   );
   
-  const todayTasks = tasks.filter(t => 
+  const todayTasks = filteredTasks.filter(t => 
     (isToday(new Date(t.deadline)) || !isPast(new Date(t.deadline))) && 
     t.status !== '已完成'
   );
   
-  const completedTasks = tasks.filter(t => t.status === '已完成');
+  const completedTasks = filteredTasks.filter(t => t.status === '已完成');
+
+  const overallProgress = (tasks.filter(t => t.status === '已完成').length / tasks.length) * 100;
 
   const onDragEnd = useCallback((result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -252,20 +303,23 @@ export default function App() {
           <div className="flex flex-col min-w-[120px]">
              <div className="flex justify-between items-center mb-1">
                 <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">总进度</span>
-                <span className="text-[10px] font-mono text-indigo-400">68%</span>
+                <span className="text-[10px] font-mono text-indigo-400">{Math.round(overallProgress)}%</span>
              </div>
              <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500 w-[68%] rounded-full shadow-[0_0_8px_rgba(79,70,229,0.4)]" />
+                <div 
+                  className="h-full bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(79,70,229,0.4)] transition-all duration-500" 
+                  style={{ width: `${overallProgress}%` }}
+                />
              </div>
           </div>
           <div className="flex items-center gap-4">
              <div className="text-center">
                 <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">延期</p>
-                <p className="text-xs font-mono font-bold text-red-500">{overdueTasks.length}</p>
+                <p className="text-xs font-mono font-bold text-red-500">{tasks.filter(t => isPast(new Date(t.deadline)) && !isToday(new Date(t.deadline)) && t.status !== '已完成').length}</p>
              </div>
              <div className="text-center">
                 <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">已清</p>
-                <p className="text-xs font-mono font-bold text-emerald-500">{completedTasks.length}</p>
+                <p className="text-xs font-mono font-bold text-emerald-500">{tasks.filter(t => t.status === '已完成').length}</p>
              </div>
           </div>
         </div>
@@ -281,19 +335,62 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content Grid */}
-      <main className="flex-1 p-6 grid grid-cols-12 gap-6 overflow-hidden">
+      {/* Main Content Area */}
+      <main className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
         
-        <DragDropContext onDragEnd={onDragEnd}>
-          {/* Overdue Bento Column */}
-          <section className="col-span-4 bg-slate-900/30 rounded-2xl border border-dashed border-red-900/30 flex flex-col overflow-hidden group hover:bg-red-500/[0.02] transition-colors">
-            <div className="p-4 border-b border-red-900/20 bg-red-950/20 flex justify-between items-center">
-              <h2 className="text-xs font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
-                <History size={14} />
-                逾期任务
-              </h2>
-              <span className="px-2 py-0.5 bg-red-900 text-red-200 text-[10px] rounded-full font-bold">{overdueTasks.length}</span>
+        {/* Minimal Filter Bar */}
+        <div className="flex items-center justify-between shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+          <div className="flex items-center gap-6">
+            <h2 className="text-sm font-bold text-slate-100 uppercase tracking-widest flex items-center gap-2">
+              <LayoutGrid size={16} className="text-indigo-400" />
+              当日子任务看板
+            </h2>
+            <div className="w-px h-6 bg-slate-800" />
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={14} />
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="搜索子任务或资产序号..." 
+                className="bg-slate-950 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-xs w-64 focus:outline-none focus:border-indigo-500/50 transition-all font-medium placeholder:text-slate-700"
+              />
             </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex bg-slate-950 border border-slate-800 p-1 rounded-xl">
+              {(['All', '高', '中', '低'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPriorityFilter(p)}
+                  className={cn(
+                    "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
+                    priorityFilter === p ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30" : "text-slate-500 hover:text-slate-400 hover:bg-slate-900"
+                  )}
+                >
+                  {p === 'All' ? '全部' : p}
+                </button>
+              ))}
+            </div>
+            <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/20 transition-all active:scale-95">
+              <Plus size={14} />
+              新建子任务
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
+          <DragDropContext onDragEnd={onDragEnd}>
+            {/* Overdue Bento Column */}
+            <section className="col-span-4 bg-slate-900/30 rounded-2xl border border-dashed border-red-900/30 flex flex-col overflow-hidden group hover:bg-red-500/[0.02] transition-colors">
+              <div className="p-4 border-b border-red-900/20 bg-red-950/20 flex justify-between items-center">
+                <h2 className="text-xs font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
+                  <History size={14} />
+                  昨日遗留项
+                </h2>
+                <span className="px-2 py-0.5 bg-red-900 text-red-200 text-[10px] rounded-full font-bold">{overdueTasks.length}</span>
+              </div>
             
             <Droppable droppableId="overdue">
               {(provided, snapshot) => (
@@ -418,6 +515,7 @@ export default function App() {
             </Droppable>
           </section>
         </DragDropContext>
+        </div>
       </main>
 
       {/* Footer Bar */}
