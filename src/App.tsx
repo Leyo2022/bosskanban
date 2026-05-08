@@ -64,7 +64,7 @@ const INITIAL_TASKS: Task[] = [
     priority: '高',
     deadline: '2026-05-07T18:00:00Z',
     description: '子任务：完成嘴角与眼角皱纹的高模细节。需支持后续表情融合。',
-    phase: '角色制作'
+    phase: '模型雕刻'
   },
   {
     id: 'task-6',
@@ -74,7 +74,7 @@ const INITIAL_TASKS: Task[] = [
     priority: '高',
     deadline: '2026-05-07T14:00:00Z',
     description: '子任务：修复膝关节处极点布线，确保形变伸缩比。',
-    phase: '角色制作'
+    phase: '拓扑优化'
   },
   {
     id: 'task-7',
@@ -84,7 +84,7 @@ const INITIAL_TASKS: Task[] = [
     priority: '低',
     deadline: '2026-05-07T10:00:00Z',
     description: '子任务：核对所有UDIM象限命名规范。',
-    phase: '角色制作'
+    phase: '资产发布'
   },
   {
     id: 'task-2',
@@ -94,7 +94,7 @@ const INITIAL_TASKS: Task[] = [
     priority: '中',
     deadline: '2026-05-08T17:00:00Z',
     description: '子任务：优化网格结构以减少动画渲染开销。',
-    phase: '角色制作'
+    phase: '拓扑优化'
   },
   {
     id: 'task-3',
@@ -104,7 +104,7 @@ const INITIAL_TASKS: Task[] = [
     priority: '高',
     deadline: '2026-05-08T20:00:00Z',
     description: '子任务：展开前2个UV象限，满足8K绘制精度。',
-    phase: '角色制作'
+    phase: 'UV展开'
   },
   {
     id: 'task-4',
@@ -114,7 +114,7 @@ const INITIAL_TASKS: Task[] = [
     priority: '低',
     deadline: '2026-05-08T16:00:00Z',
     description: '子任务：优化步行模式下的长发遮蔽与碰撞。',
-    phase: '角色制作'
+    phase: '毛发制作'
   },
   {
     id: 'task-8',
@@ -124,7 +124,7 @@ const INITIAL_TASKS: Task[] = [
     priority: '高',
     deadline: '2026-05-08T22:00:00Z',
     description: '子任务：建立Substance智能材质球基础属性。',
-    phase: '角色制作'
+    phase: '材质绘制'
   },
   {
     id: 'task-5',
@@ -134,7 +134,7 @@ const INITIAL_TASKS: Task[] = [
     priority: '中',
     deadline: '2026-05-08T10:00:00Z',
     description: '子任务：烘培法线贴图并核对黑边与硬边。',
-    phase: '角色制作'
+    phase: '材质绘制'
   },
   {
     id: 'task-9',
@@ -144,7 +144,7 @@ const INITIAL_TASKS: Task[] = [
     priority: '低',
     deadline: '2026-05-08T09:00:00Z',
     description: '子任务：打包角色资产并上传至Shotgrid预览节点。',
-    phase: '角色制作'
+    phase: '资产发布'
   }
 ];
 
@@ -232,6 +232,8 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'All'>('All');
+  const [assigneeFilter, setAssigneeFilter] = useState<string | 'All'>('All');
+  const [phaseFilter, setPhaseFilter] = useState<string | 'All'>('All');
 
   // Fix for React Beautiful Dnd strict mode
   useEffect(() => {
@@ -242,8 +244,13 @@ export default function App() {
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          t.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesPriority = priorityFilter === 'All' || t.priority === priorityFilter;
-    return matchesSearch && matchesPriority;
+    const matchesAssignee = assigneeFilter === 'All' || t.assignee.name === assigneeFilter;
+    const matchesPhase = phaseFilter === 'All' || t.phase === phaseFilter;
+    return matchesSearch && matchesPriority && matchesAssignee && matchesPhase;
   });
+
+  const assignees = Array.from(new Set(INITIAL_TASKS.map(t => t.assignee.name)));
+  const phases = Array.from(new Set(INITIAL_TASKS.map(t => t.phase)));
 
   const overdueTasks = filteredTasks.filter(t => 
     isPast(new Date(t.deadline)) && 
@@ -359,6 +366,26 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Phase Selector */}
+            <select 
+              value={phaseFilter}
+              onChange={(e) => setPhaseFilter(e.target.value)}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-300 focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
+            >
+              <option value="All">全部环节</option>
+              {phases.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+
+            {/* Assignee Selector */}
+            <select 
+              value={assigneeFilter}
+              onChange={(e) => setAssigneeFilter(e.target.value)}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-300 focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
+            >
+              <option value="All">全部人员</option>
+              {assignees.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+
             <div className="flex bg-slate-950 border border-slate-800 p-1 rounded-xl">
               {(['All', '高', '中', '低'] as const).map((p) => (
                 <button
@@ -369,14 +396,10 @@ export default function App() {
                     priorityFilter === p ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30" : "text-slate-500 hover:text-slate-400 hover:bg-slate-900"
                   )}
                 >
-                  {p === 'All' ? '全部' : p}
+                  {p === 'All' ? '优先级' : p}
                 </button>
               ))}
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/20 transition-all active:scale-95">
-              <Plus size={14} />
-              新建子任务
-            </button>
           </div>
         </div>
 
