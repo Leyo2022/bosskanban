@@ -40,6 +40,7 @@ import { cn } from './lib/utils';
 
 type Priority = '高' | '中' | '低';
 type TaskStatus = '待处理' | '进行中' | '已完成';
+type ViewMode = 'Kanban' | 'Gantt';
 
 interface Task {
   id: string;
@@ -240,73 +241,94 @@ const TaskCard = ({ task, index }: TaskCardProps) => {
 };
 
 const GanttView = ({ tasks }: { tasks: Task[] }) => {
-  const dates = Array.from({ length: 7 }, (_, i) => addDays(new Date('2026-05-04T00:00:00Z'), i));
+  const startDate = new Date('2026-05-04T00:00:00Z');
+  const daysInView = 7;
+  const dates = Array.from({ length: daysInView }, (_, i) => addDays(startDate, i));
   
   return (
-    <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
-      <div className="flex border-b border-slate-800 bg-slate-900/50">
-        <div className="w-64 p-4 border-r border-slate-800 font-bold text-xs uppercase tracking-widest text-slate-500">子任务名称 / 负责人</div>
+    <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl backdrop-blur-sm bg-opacity-80">
+      <div className="flex border-b border-slate-800 bg-slate-950/40">
+        <div className="w-64 p-4 border-r border-slate-800 font-bold text-[10px] uppercase tracking-widest text-slate-500 bg-slate-950/20">
+          每日生产安排 / 子任务
+        </div>
         {dates.map((date, i) => (
           <div key={i} className={cn(
-            "flex-1 p-4 text-center border-r border-slate-800 last:border-0",
+            "flex-1 p-3 text-center border-r border-slate-800 last:border-0",
             isToday(date) && "bg-indigo-500/10"
           )}>
-            <p className="text-[10px] text-slate-500 uppercase font-bold">{format(date, 'EEE', { locale: zhCN })}</p>
-            <p className={cn("text-sm font-mono font-bold", isToday(date) ? "text-indigo-400" : "text-slate-300")}>{format(date, 'MM/dd')}</p>
+            <p className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">{format(date, 'EEEE', { locale: zhCN })}</p>
+            <p className={cn("text-xs font-mono font-bold mt-1", isToday(date) ? "text-indigo-400" : "text-slate-300")}>{format(date, 'MM月dd日')}</p>
           </div>
         ))}
       </div>
       
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        {tasks.map(task => {
+      <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-900/30">
+        {tasks.length > 0 ? tasks.map(task => {
           const start = new Date(task.startDate);
           const end = new Date(task.deadline);
-          const timelineStart = dates[0];
-          const timelineEnd = dates[dates.length - 1];
           
-          // Simple positioning logic
-          const diffDays = Math.max(0, differenceInCalendarDays(start, timelineStart));
+          const diffDays = differenceInCalendarDays(start, startDate);
           const durationDays = differenceInCalendarDays(end, start) + 1;
-          const leftPercent = (diffDays / dates.length) * 100;
-          const widthPercent = (durationDays / dates.length) * 100;
+          
+          const displayStart = Math.max(0, diffDays);
+          const displayEnd = Math.min(daysInView, diffDays + durationDays);
+          const displayDuration = Math.max(0.5, displayEnd - displayStart);
+          
+          const leftPercent = (displayStart / daysInView) * 100;
+          const widthPercent = (displayDuration / daysInView) * 100;
+
+          const isOut = (diffDays + durationDays <= 0) || (diffDays >= daysInView);
+
+          if (isOut) return null;
 
           return (
-            <div key={task.id} className="flex border-b border-slate-800 hover:bg-slate-800/30 transition-colors group">
-              <div className="w-64 p-4 border-r border-slate-800 flex items-center gap-3">
-                <img src={task.assignee.avatar} className="w-6 h-6 rounded-full border border-slate-700" alt="" />
+            <div key={task.id} className="flex border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors group">
+              <div className="w-64 p-4 border-r border-slate-800 flex items-center gap-3 shrink-0 bg-slate-900/20">
+                <img src={task.assignee.avatar} className="w-7 h-7 rounded-full border-2 border-slate-800 shadow-md" alt="" />
                 <div className="overflow-hidden">
-                  <p className="text-xs font-bold text-slate-200 truncate">{task.name}</p>
-                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">{task.assignee.name} · {task.phase}</p>
+                  <p className="text-[11px] font-bold text-slate-200 truncate leading-tight tracking-tight">{task.name}</p>
+                  <p className="text-[9px] text-slate-500 font-bold tracking-tight mt-1 uppercase opacity-70">{task.assignee.name} · {task.phase}</p>
                 </div>
               </div>
-              <div className="flex-1 relative h-16 flex items-center px-4">
-                {/* Horizontal Grid lines */}
-                <div className="absolute inset-0 flex">
-                   {dates.map((_, i) => <div key={i} className="flex-1 border-r border-slate-800/30 last:border-0" />)}
+              <div className="flex-1 relative h-16 flex items-center">
+                <div className="absolute inset-0 flex pointer-events-none">
+                   {dates.map((_, i) => <div key={i} className="flex-1 border-r border-slate-800/10 last:border-0" />)}
                 </div>
+
+                {dates.map((date, i) => isToday(date) && (
+                   <div key={i} className="absolute inset-y-0 bg-indigo-500/[0.03] pointer-events-none" style={{ left: `${(i / daysInView) * 100}%`, width: `${100 / daysInView}%` }} />
+                ))}
                 
                 <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ scale: 1.01 }}
                   className={cn(
-                    "relative h-8 rounded-lg shadow-lg flex items-center px-3 z-10 border",
-                    task.status === '已完成' ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" :
-                    isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline)) ? "bg-red-500/20 border-red-500/30 text-red-400" :
-                    "bg-indigo-600 border-indigo-400/50 text-white"
+                    "relative h-9 rounded-xl shadow-xl flex items-center px-4 z-10 border overflow-hidden",
+                    task.status === '已完成' ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-300" :
+                    isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline)) ? "bg-red-500/20 border-red-500/30 text-red-300" :
+                    task.priority === '高' ? "bg-indigo-600 border-indigo-400/50 text-white shadow-indigo-600/20 shadow-lg" :
+                    "bg-slate-800 border-slate-700 text-slate-300"
                   )}
                   style={{ 
-                    marginLeft: `${leftPercent}%`, 
+                    left: `${leftPercent}%`, 
                     width: `${Math.min(100 - leftPercent, widthPercent)}%`,
-                    minWidth: '40px'
+                    minWidth: '60px'
                   }}
                 >
-                  <span className="text-[10px] font-bold truncate">{task.status}</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest truncate">{task.status}</span>
                   {task.status === '已完成' && <CheckCircle2 size={12} className="ml-auto shrink-0" />}
                 </motion.div>
               </div>
             </div>
           );
-        })}
+        }) : (
+          <div className="flex flex-col items-center justify-center h-64 text-slate-600">
+             <Target size={40} className="mb-2 opacity-20" />
+             <p className="text-xs font-bold uppercase tracking-widest">在该筛选条件下无任务安排</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -400,13 +422,13 @@ export default function App() {
                   )}
                 >
                   {mode === 'Kanban' ? <LayoutGrid size={12} /> : <Calendar size={12} />}
-                  {mode === 'Kanban' ? '看板视图' : '甘特图'}
+                  {mode === 'Kanban' ? '看板视图' : '环节甘特图'}
                 </button>
               ))}
            </div>
           <div className="flex flex-col">
-            <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">当前阶段</span>
-            <span className="text-xs font-bold text-slate-200">角色制作环节</span>
+            <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">当日任务进度</span>
+            <span className="text-xs font-bold text-slate-200">角色制作进度跟踪</span>
           </div>
           <div className="flex flex-col min-w-[120px]">
              <div className="flex justify-between items-center mb-1">
@@ -448,11 +470,6 @@ export default function App() {
         {/* Minimal Filter Bar */}
         <div className="flex items-center justify-between shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
           <div className="flex items-center gap-6">
-            <h2 className="text-sm font-bold text-slate-100 uppercase tracking-widest flex items-center gap-2">
-              <LayoutGrid size={16} className="text-indigo-400" />
-              当日子任务看板
-            </h2>
-            <div className="w-px h-6 bg-slate-800" />
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={14} />
               <input 
