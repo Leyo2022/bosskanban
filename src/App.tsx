@@ -232,20 +232,48 @@ export default function App() {
   return (
     <div className="w-full h-screen bg-slate-950 text-slate-200 flex flex-col font-sans overflow-hidden">
       {/* Header */}
-      <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 shrink-0">
+      <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 shrink-0 z-50">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/20">
             <Film size={20} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold leading-none text-slate-100 uppercase tracking-tight">CineAsset 资产管理 v2.4</h1>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">角色制作管线控制台</p>
+            <h1 className="text-lg font-semibold leading-none text-slate-100 uppercase tracking-tight">角色制作环节</h1>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">生产自检与资产交付工作台 (Production Workbench)</p>
           </div>
         </div>
-        <div className="flex items-center gap-6">
+
+        {/* Migrated Overview Info */}
+        <div className="hidden lg:flex items-center gap-8 pl-8 ml-8 border-l border-slate-800">
+          <div className="flex flex-col">
+            <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">当前阶段</span>
+            <span className="text-xs font-bold text-slate-200">角色制作环节</span>
+          </div>
+          <div className="flex flex-col min-w-[120px]">
+             <div className="flex justify-between items-center mb-1">
+                <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">总进度</span>
+                <span className="text-[10px] font-mono text-indigo-400">68%</span>
+             </div>
+             <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-indigo-500 w-[68%] rounded-full shadow-[0_0_8px_rgba(79,70,229,0.4)]" />
+             </div>
+          </div>
+          <div className="flex items-center gap-4">
+             <div className="text-center">
+                <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">延期</p>
+                <p className="text-xs font-mono font-bold text-red-500">{overdueTasks.length}</p>
+             </div>
+             <div className="text-center">
+                <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">已清</p>
+                <p className="text-xs font-mono font-bold text-emerald-500">{completedTasks.length}</p>
+             </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6 ml-auto">
           <div className="text-right hidden sm:block">
-            <p className="text-xs text-slate-500">当前阶段</p>
-            <p className="text-sm font-medium text-indigo-400">角色实验室 / 雕刻制作</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">工作节点</p>
+            <p className="text-xs font-medium text-indigo-400">ASSET-SVR-CHARACTER-PROD</p>
           </div>
           <div className="w-10 h-10 rounded-full border border-slate-700 bg-slate-800 flex items-center justify-center overflow-hidden shadow-inner">
             <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-500" />
@@ -254,54 +282,11 @@ export default function App() {
       </header>
 
       {/* Main Content Grid */}
-      <main className="flex-1 p-6 grid grid-cols-12 grid-rows-6 gap-4 overflow-hidden">
+      <main className="flex-1 p-6 grid grid-cols-12 gap-6 overflow-hidden">
         
-        {/* Intro/Stats Bento Box */}
-        <section className="col-span-3 row-span-4 bg-slate-900 rounded-2xl border border-slate-800 p-5 flex flex-col justify-between shadow-xl">
-          <div>
-            <h3 className="text-xs font-bold text-slate-500 uppercase mb-4 tracking-[0.1em]">环节概览</h3>
-            <div className="space-y-4">
-              <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800/50 group hover:border-indigo-500/30 transition-colors">
-                <p className="text-[10px] text-slate-500 uppercase mb-1">当前阶段</p>
-                <div className="flex items-center gap-2">
-                  <LayoutGrid size={14} className="text-indigo-400" />
-                  <p className="text-base font-bold text-white">角色制作环节</p>
-                </div>
-              </div>
-              <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800/50">
-                <p className="text-[10px] text-slate-500 uppercase mb-2">制作总进度</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: '68%' }}
-                      className="h-full bg-indigo-500 rounded-full shadow-[0_0_10px_rgba(79,70,229,0.5)]"
-                    />
-                  </div>
-                  <span className="text-xs font-mono font-bold text-indigo-400">68%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-3 pt-4 mt-auto border-t border-slate-800/50">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-500">待处理任务</span>
-              <span className="text-white font-mono bg-slate-800 px-2 py-0.5 rounded">{todayTasks.length + overdueTasks.length}</span>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-500">今日已完成</span>
-              <span className="text-emerald-400 font-mono bg-emerald-400/10 px-2 py-0.5 rounded">{completedTasks.length}</span>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-500">延期任务</span>
-              <span className="text-red-400 font-mono bg-red-400/10 px-2 py-0.5 rounded">{overdueTasks.length}</span>
-            </div>
-          </div>
-        </section>
-
         <DragDropContext onDragEnd={onDragEnd}>
           {/* Overdue Bento Column */}
-          <section className="col-span-3 row-span-6 bg-slate-900/30 rounded-2xl border border-dashed border-red-900/30 flex flex-col overflow-hidden group hover:bg-red-500/[0.02] transition-colors">
+          <section className="col-span-4 bg-slate-900/30 rounded-2xl border border-dashed border-red-900/30 flex flex-col overflow-hidden group hover:bg-red-500/[0.02] transition-colors">
             <div className="p-4 border-b border-red-900/20 bg-red-950/20 flex justify-between items-center">
               <h2 className="text-xs font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
                 <History size={14} />
@@ -330,7 +315,7 @@ export default function App() {
           </section>
 
           {/* Today Bento Column */}
-          <section className="col-span-3 row-span-6 bg-slate-900 rounded-2xl border border-slate-800 flex flex-col overflow-hidden shadow-2xl relative">
+          <section className="col-span-4 bg-slate-900 rounded-2xl border border-slate-800 flex flex-col overflow-hidden shadow-2xl relative">
             <div className="p-4 border-b border-slate-800 bg-slate-800/30 flex justify-between items-center">
               <h2 className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
                 <Clock size={14} />
@@ -366,7 +351,7 @@ export default function App() {
           </section>
 
           {/* Done Bento Column / Drop Zone */}
-          <section className="col-span-3 row-span-6 bg-slate-900/30 rounded-2xl border border-dashed border-emerald-900/20 flex flex-col overflow-hidden">
+          <section className="col-span-4 bg-slate-900/30 rounded-2xl border border-dashed border-emerald-900/20 flex flex-col overflow-hidden">
             <div className="p-4 border-b border-emerald-900/10 bg-emerald-500/5 flex justify-between items-center">
               <h2 className="text-xs font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-2">
                 <CheckCircle2 size={14} />
@@ -433,16 +418,6 @@ export default function App() {
             </Droppable>
           </section>
         </DragDropContext>
-
-        {/* Quick Action Bento */}
-        <section className="col-span-3 row-span-2 bg-indigo-600 rounded-2xl p-5 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-indigo-500 transition-all active:scale-95 group shadow-lg shadow-indigo-600/30">
-          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-            <Plus size={28} className="text-white" />
-          </div>
-          <p className="text-sm font-bold text-white uppercase tracking-wider">新建资产任务</p>
-          <p className="text-[10px] text-indigo-100 mt-1 uppercase tracking-widest font-mono">创建新资产位 (Create New Slot)</p>
-        </section>
-
       </main>
 
       {/* Footer Bar */}
