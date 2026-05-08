@@ -28,10 +28,12 @@ import {
   User as UserIcon,
   Layers,
   ArrowRightCircle,
-  History
+  History,
+  Target
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { format, isPast, isToday } from 'date-fns';
+import { format, isPast, isToday, addDays, differenceInCalendarDays } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 import { cn } from './lib/utils';
 
 // --- Types ---
@@ -51,6 +53,7 @@ interface Task {
   deadline: string;
   description: string;
   phase: string;
+  startDate: string;
 }
 
 // --- Mock Data ---
@@ -62,6 +65,7 @@ const INITIAL_TASKS: Task[] = [
     assignee: { name: '陈晓东', avatar: 'https://i.pravatar.cc/150?u=alex' },
     status: '进行中',
     priority: '高',
+    startDate: '2026-05-06T09:00:00Z',
     deadline: '2026-05-07T18:00:00Z',
     description: '子任务：完成嘴角与眼角皱纹的高模细节。需支持后续表情融合。',
     phase: '模型雕刻'
@@ -72,6 +76,7 @@ const INITIAL_TASKS: Task[] = [
     assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
     status: '进行中',
     priority: '高',
+    startDate: '2026-05-06T10:00:00Z',
     deadline: '2026-05-07T14:00:00Z',
     description: '子任务：修复膝关节处极点布线，确保形变伸缩比。',
     phase: '拓扑优化'
@@ -82,6 +87,7 @@ const INITIAL_TASKS: Task[] = [
     assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
     status: '待处理',
     priority: '低',
+    startDate: '2026-05-07T08:00:00Z',
     deadline: '2026-05-07T10:00:00Z',
     description: '子任务：核对所有UDIM象限命名规范。',
     phase: '资产发布'
@@ -92,6 +98,7 @@ const INITIAL_TASKS: Task[] = [
     assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
     status: '待处理',
     priority: '中',
+    startDate: '2026-05-07T14:00:00Z',
     deadline: '2026-05-08T17:00:00Z',
     description: '子任务：优化网格结构以减少动画渲染开销。',
     phase: '拓扑优化'
@@ -102,6 +109,7 @@ const INITIAL_TASKS: Task[] = [
     assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
     status: '进行中',
     priority: '高',
+    startDate: '2026-05-08T09:00:00Z',
     deadline: '2026-05-08T20:00:00Z',
     description: '子任务：展开前2个UV象限，满足8K绘制精度。',
     phase: 'UV展开'
@@ -112,6 +120,7 @@ const INITIAL_TASKS: Task[] = [
     assignee: { name: '王小云', avatar: 'https://i.pravatar.cc/150?u=emily' },
     status: '进行中',
     priority: '低',
+    startDate: '2026-05-08T08:00:00Z',
     deadline: '2026-05-08T16:00:00Z',
     description: '子任务：优化步行模式下的长发遮蔽与碰撞。',
     phase: '毛发制作'
@@ -122,6 +131,7 @@ const INITIAL_TASKS: Task[] = [
     assignee: { name: '陈晓东', avatar: 'https://i.pravatar.cc/150?u=alex' },
     status: '待处理',
     priority: '高',
+    startDate: '2026-05-08T13:00:00Z',
     deadline: '2026-05-08T22:00:00Z',
     description: '子任务：建立Substance智能材质球基础属性。',
     phase: '材质绘制'
@@ -132,6 +142,7 @@ const INITIAL_TASKS: Task[] = [
     assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
     status: '已完成',
     priority: '中',
+    startDate: '2026-05-08T08:00:00Z',
     deadline: '2026-05-08T10:00:00Z',
     description: '子任务：烘培法线贴图并核对黑边与硬边。',
     phase: '材质绘制'
@@ -142,6 +153,7 @@ const INITIAL_TASKS: Task[] = [
     assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
     status: '已完成',
     priority: '低',
+    startDate: '2026-05-07T16:00:00Z',
     deadline: '2026-05-08T09:00:00Z',
     description: '子任务：打包角色资产并上传至Shotgrid预览节点。',
     phase: '资产发布'
@@ -227,6 +239,79 @@ const TaskCard = ({ task, index }: TaskCardProps) => {
   );
 };
 
+const GanttView = ({ tasks }: { tasks: Task[] }) => {
+  const dates = Array.from({ length: 7 }, (_, i) => addDays(new Date('2026-05-04T00:00:00Z'), i));
+  
+  return (
+    <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+      <div className="flex border-b border-slate-800 bg-slate-900/50">
+        <div className="w-64 p-4 border-r border-slate-800 font-bold text-xs uppercase tracking-widest text-slate-500">子任务名称 / 负责人</div>
+        {dates.map((date, i) => (
+          <div key={i} className={cn(
+            "flex-1 p-4 text-center border-r border-slate-800 last:border-0",
+            isToday(date) && "bg-indigo-500/10"
+          )}>
+            <p className="text-[10px] text-slate-500 uppercase font-bold">{format(date, 'EEE', { locale: zhCN })}</p>
+            <p className={cn("text-sm font-mono font-bold", isToday(date) ? "text-indigo-400" : "text-slate-300")}>{format(date, 'MM/dd')}</p>
+          </div>
+        ))}
+      </div>
+      
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        {tasks.map(task => {
+          const start = new Date(task.startDate);
+          const end = new Date(task.deadline);
+          const timelineStart = dates[0];
+          const timelineEnd = dates[dates.length - 1];
+          
+          // Simple positioning logic
+          const diffDays = Math.max(0, differenceInCalendarDays(start, timelineStart));
+          const durationDays = differenceInCalendarDays(end, start) + 1;
+          const leftPercent = (diffDays / dates.length) * 100;
+          const widthPercent = (durationDays / dates.length) * 100;
+
+          return (
+            <div key={task.id} className="flex border-b border-slate-800 hover:bg-slate-800/30 transition-colors group">
+              <div className="w-64 p-4 border-r border-slate-800 flex items-center gap-3">
+                <img src={task.assignee.avatar} className="w-6 h-6 rounded-full border border-slate-700" alt="" />
+                <div className="overflow-hidden">
+                  <p className="text-xs font-bold text-slate-200 truncate">{task.name}</p>
+                  <p className="text-[9px] text-slate-500 uppercase font-bold tracking-tighter">{task.assignee.name} · {task.phase}</p>
+                </div>
+              </div>
+              <div className="flex-1 relative h-16 flex items-center px-4">
+                {/* Horizontal Grid lines */}
+                <div className="absolute inset-0 flex">
+                   {dates.map((_, i) => <div key={i} className="flex-1 border-r border-slate-800/30 last:border-0" />)}
+                </div>
+                
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className={cn(
+                    "relative h-8 rounded-lg shadow-lg flex items-center px-3 z-10 border",
+                    task.status === '已完成' ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" :
+                    isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline)) ? "bg-red-500/20 border-red-500/30 text-red-400" :
+                    "bg-indigo-600 border-indigo-400/50 text-white"
+                  )}
+                  style={{ 
+                    marginLeft: `${leftPercent}%`, 
+                    width: `${Math.min(100 - leftPercent, widthPercent)}%`,
+                    minWidth: '40px'
+                  }}
+                >
+                  <span className="text-[10px] font-bold truncate">{task.status}</span>
+                  {task.status === '已完成' && <CheckCircle2 size={12} className="ml-auto shrink-0" />}
+                </motion.div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [isReady, setIsReady] = useState(false);
@@ -234,6 +319,7 @@ export default function App() {
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'All'>('All');
   const [assigneeFilter, setAssigneeFilter] = useState<string | 'All'>('All');
   const [phaseFilter, setPhaseFilter] = useState<string | 'All'>('All');
+  const [viewMode, setViewMode] = useState<ViewMode>('Kanban');
 
   // Fix for React Beautiful Dnd strict mode
   useEffect(() => {
@@ -303,6 +389,21 @@ export default function App() {
 
         {/* Migrated Overview Info */}
         <div className="hidden lg:flex items-center gap-8 pl-8 ml-8 border-l border-slate-800">
+           <div className="flex bg-slate-950/80 border border-slate-800 p-1 rounded-xl">
+              {(['Kanban', 'Gantt'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={cn(
+                    "px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-2 uppercase tracking-widest",
+                    viewMode === mode ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30" : "text-slate-500 hover:text-slate-400"
+                  )}
+                >
+                  {mode === 'Kanban' ? <LayoutGrid size={12} /> : <Calendar size={12} />}
+                  {mode === 'Kanban' ? '看板视图' : '甘特图'}
+                </button>
+              ))}
+           </div>
           <div className="flex flex-col">
             <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">当前阶段</span>
             <span className="text-xs font-bold text-slate-200">角色制作环节</span>
@@ -344,7 +445,6 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
-        
         {/* Minimal Filter Bar */}
         <div className="flex items-center justify-between shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
           <div className="flex items-center gap-6">
@@ -403,142 +503,146 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
-          <DragDropContext onDragEnd={onDragEnd}>
-            {/* Overdue Bento Column */}
-            <section className="col-span-4 bg-slate-900/30 rounded-2xl border border-dashed border-red-900/30 flex flex-col overflow-hidden group hover:bg-red-500/[0.02] transition-colors">
-              <div className="p-4 border-b border-red-900/20 bg-red-950/20 flex justify-between items-center">
-                <h2 className="text-xs font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
-                  <History size={14} />
-                  昨日遗留项
-                </h2>
-                <span className="px-2 py-0.5 bg-red-900 text-red-200 text-[10px] rounded-full font-bold">{overdueTasks.length}</span>
-              </div>
-            
-            <Droppable droppableId="overdue">
-              {(provided, snapshot) => (
-                <div 
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={cn(
-                    "flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar transition-all duration-300",
-                    snapshot.isDraggingOver && "bg-red-500/[0.05]"
-                  )}
-                >
-                  {overdueTasks.map((task, idx) => (
-                    <TaskCard key={task.id} task={task} index={idx} />
-                  ))}
-                  {provided.placeholder}
+        {viewMode === 'Kanban' ? (
+          <div className="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
+            <DragDropContext onDragEnd={onDragEnd}>
+              {/* Overdue Bento Column */}
+              <section className="col-span-4 bg-slate-900/30 rounded-2xl border border-dashed border-red-900/30 flex flex-col overflow-hidden group hover:bg-red-500/[0.02] transition-colors">
+                <div className="p-4 border-b border-red-900/20 bg-red-950/20 flex justify-between items-center">
+                  <h2 className="text-xs font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
+                    <History size={14} />
+                    昨日遗留项
+                  </h2>
+                  <span className="px-2 py-0.5 bg-red-900 text-red-200 text-[10px] rounded-full font-bold">{overdueTasks.length}</span>
                 </div>
-              )}
-            </Droppable>
-          </section>
-
-          {/* Today Bento Column */}
-          <section className="col-span-4 bg-slate-900 rounded-2xl border border-slate-800 flex flex-col overflow-hidden shadow-2xl relative">
-            <div className="p-4 border-b border-slate-800 bg-slate-800/30 flex justify-between items-center">
-              <h2 className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                <Clock size={14} />
-                今日待办
-              </h2>
-              <span className="px-2 py-0.5 bg-indigo-900/50 text-indigo-200 text-[10px] rounded-full font-bold">{todayTasks.length}</span>
-            </div>
-            
-            <Droppable droppableId="today">
-              {(provided, snapshot) => (
-                <div 
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={cn(
-                    "flex-1 p-4 space-y-4 overflow-y-auto custom-scrollbar transition-all duration-300",
-                    snapshot.isDraggingOver && "bg-indigo-500/[0.02]"
-                  )}
-                >
-                  {todayTasks.length > 0 ? (
-                    todayTasks.map((task, idx) => (
-                      <TaskCard key={task.id} task={task} index={idx} />
-                    ))
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center opacity-20 text-center">
-                      <LayoutGrid size={48} strokeWidth={1} />
-                      <p className="mt-2 text-xs font-bold uppercase">今日暂无更多任务</p>
+              
+                <Droppable droppableId="overdue">
+                  {(provided, snapshot) => (
+                    <div 
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={cn(
+                        "flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar transition-all duration-300",
+                        snapshot.isDraggingOver && "bg-red-500/[0.05]"
+                      )}
+                    >
+                      {overdueTasks.map((task, idx) => (
+                        <TaskCard key={task.id} task={task} index={idx} />
+                      ))}
+                      {provided.placeholder}
                     </div>
                   )}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </section>
+                </Droppable>
+              </section>
 
-          {/* Done Bento Column / Drop Zone */}
-          <section className="col-span-4 bg-slate-900/30 rounded-2xl border border-dashed border-emerald-900/20 flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-emerald-900/10 bg-emerald-500/5 flex justify-between items-center">
-              <h2 className="text-xs font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-2">
-                <CheckCircle2 size={14} />
-                今日已清
-              </h2>
-              <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 text-[10px] rounded-full font-bold">{completedTasks.length}</span>
-            </div>
-            
-            <Droppable droppableId="completed-zone">
-              {(provided, snapshot) => (
-                <div 
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={cn(
-                    "flex-1 p-3 space-y-3 relative overflow-hidden transition-all duration-300",
-                    snapshot.isDraggingOver ? "bg-emerald-500/10 border-emerald-500/50 h-full" : "bg-transparent"
+              {/* Today Bento Column */}
+              <section className="col-span-4 bg-slate-900 rounded-2xl border border-slate-800 flex flex-col overflow-hidden shadow-2xl relative">
+                <div className="p-4 border-b border-slate-800 bg-slate-800/30 flex justify-between items-center">
+                  <h2 className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                    <Clock size={14} />
+                    今日待办
+                  </h2>
+                  <span className="px-2 py-0.5 bg-indigo-900/50 text-indigo-200 text-[10px] rounded-full font-bold">{todayTasks.length}</span>
+                </div>
+                
+                <Droppable droppableId="today">
+                  {(provided, snapshot) => (
+                    <div 
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={cn(
+                        "flex-1 p-4 space-y-4 overflow-y-auto custom-scrollbar transition-all duration-300",
+                        snapshot.isDraggingOver && "bg-indigo-500/[0.02]"
+                      )}
+                    >
+                      {todayTasks.length > 0 ? (
+                        todayTasks.map((task, idx) => (
+                          <TaskCard key={task.id} task={task} index={idx} />
+                        ))
+                      ) : (
+                        <div className="h-full flex flex-col items-center justify-center opacity-20 text-center">
+                          <LayoutGrid size={48} strokeWidth={1} />
+                          <p className="mt-2 text-xs font-bold uppercase">今日暂无更多任务</p>
+                        </div>
+                      )}
+                      {provided.placeholder}
+                    </div>
                   )}
-                >
-                  {/* Drop Overlay */}
-                  <AnimatePresence>
-                    {snapshot.isDraggingOver && (
-                      <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-emerald-500/10 backdrop-blur-[2px]"
-                      >
-                        <motion.div 
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ repeat: Infinity, duration: 2 }}
-                        >
-                          <ArrowRightCircle size={48} className="text-emerald-500" />
-                        </motion.div>
-                        <p className="text-emerald-400 font-bold mt-4 animate-pulse">归档任务</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                </Droppable>
+              </section>
 
-                  <div className="space-y-3 overflow-y-auto h-full custom-scrollbar pr-1">
-                    {completedTasks.map((task) => (
-                      <div key={task.id} className="group bg-slate-950/80 border border-emerald-500/20 p-3 rounded-xl flex items-start gap-3 transition-all hover:bg-slate-900">
-                        <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 mt-0.5 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
-                          <CheckCircle2 size={12} strokeWidth={3} className="text-slate-950" />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-[12px] font-bold text-slate-400 line-through truncate">{task.name}</h4>
-                          <span className="text-[9px] text-emerald-600 font-mono mt-1 block uppercase font-bold tracking-tighter">审核于 {format(new Date(task.deadline), 'HH:mm')}</span>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {completedTasks.length === 0 && !snapshot.isDraggingOver && (
-                      <div className="h-full flex flex-col items-center justify-center text-emerald-900/40 text-center px-6">
-                        <ArrowRightCircle size={32} strokeWidth={1} className="mb-2" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest mt-2 leading-relaxed">
-                          拖拽任务至此以完成生产产出
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  {provided.placeholder}
+              {/* Done Bento Column / Drop Zone */}
+              <section className="col-span-4 bg-slate-900/30 rounded-2xl border border-dashed border-emerald-900/20 flex flex-col overflow-hidden">
+                <div className="p-4 border-b border-emerald-900/10 bg-emerald-500/5 flex justify-between items-center">
+                  <h2 className="text-xs font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                    <CheckCircle2 size={14} />
+                    今日已清
+                  </h2>
+                  <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 text-[10px] rounded-full font-bold">{completedTasks.length}</span>
                 </div>
-              )}
-            </Droppable>
-          </section>
-        </DragDropContext>
-        </div>
+                
+                <Droppable droppableId="completed-zone">
+                  {(provided, snapshot) => (
+                    <div 
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={cn(
+                        "flex-1 p-3 space-y-3 relative overflow-hidden transition-all duration-300",
+                        snapshot.isDraggingOver ? "bg-emerald-500/10 border-emerald-500/50 h-full" : "bg-transparent"
+                      )}
+                    >
+                      {/* Drop Overlay */}
+                      <AnimatePresence>
+                        {snapshot.isDraggingOver && (
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-emerald-500/10 backdrop-blur-[2px]"
+                          >
+                            <motion.div 
+                              animate={{ scale: [1, 1.2, 1] }}
+                              transition={{ repeat: Infinity, duration: 2 }}
+                            >
+                              <ArrowRightCircle size={48} className="text-emerald-500" />
+                            </motion.div>
+                            <p className="text-emerald-400 font-bold mt-4 animate-pulse">归档任务</p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      <div className="space-y-3 overflow-y-auto h-full custom-scrollbar pr-1">
+                        {completedTasks.map((task) => (
+                          <div key={task.id} className="group bg-slate-950/80 border border-emerald-500/20 p-3 rounded-xl flex items-start gap-3 transition-all hover:bg-slate-900">
+                            <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 mt-0.5 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                              <CheckCircle2 size={12} strokeWidth={3} className="text-slate-950" />
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-[12px] font-bold text-slate-400 line-through truncate">{task.name}</h4>
+                              <span className="text-[9px] text-emerald-600 font-mono mt-1 block uppercase font-bold tracking-tighter">审核于 {format(new Date(task.deadline), 'HH:mm')}</span>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {completedTasks.length === 0 && !snapshot.isDraggingOver && (
+                          <div className="h-full flex flex-col items-center justify-center text-emerald-900/40 text-center px-6">
+                            <ArrowRightCircle size={32} strokeWidth={1} className="mb-2" />
+                            <p className="text-[10px] font-bold uppercase tracking-widest mt-2 leading-relaxed">
+                              拖拽任务至此以完成生产产出
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </section>
+            </DragDropContext>
+          </div>
+        ) : (
+          <GanttView tasks={filteredTasks} />
+        )}
       </main>
 
       {/* Footer Bar */}
