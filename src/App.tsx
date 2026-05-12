@@ -30,7 +30,8 @@ import {
   ArrowRightCircle,
   History,
   Target,
-  Columns
+  Columns,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, isPast, isToday, addDays, differenceInCalendarDays } from 'date-fns';
@@ -45,8 +46,23 @@ type TaskStatus = '待处理' | '进行中' | '已完成' | '审批中';
 type ViewMode = 'Kanban' | 'Gantt' | 'Swimlane';
 type SwimlaneGrouping = 'Phase' | 'Assignee';
 
+type MainTaskStatus = '进行中' | '已完成';
+
+interface MainTask {
+  id: string;
+  name: string;
+  status: MainTaskStatus;
+}
+
+const INITIAL_MAIN_TASKS: MainTask[] = [
+  { id: 'mt-1', name: '主角交互特效', status: '进行中' },
+  { id: 'mt-2', name: '全场景材质映射', status: '进行中' },
+];
+
 interface Task {
   id: string;
+  mainTaskId?: string;
+  isMainTaskStub?: boolean;
   name: string;
   assignee: {
     name: string;
@@ -65,6 +81,7 @@ interface Task {
 const INITIAL_TASKS: Task[] = [
   {
     id: 'task-1',
+    mainTaskId: 'mt-1',
     name: '主角雕刻 - 面部表情细节 (Day 1)',
     assignee: { name: '陈晓东', avatar: 'https://i.pravatar.cc/150?u=alex' },
     status: '进行中',
@@ -76,6 +93,7 @@ const INITIAL_TASKS: Task[] = [
   },
   {
     id: 'task-6',
+    mainTaskId: 'mt-2',
     name: '反派拓扑 - 关节区域重布线',
     assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
     status: '进行中',
@@ -161,6 +179,18 @@ const INITIAL_TASKS: Task[] = [
     deadline: '2026-05-08T09:00:00Z',
     description: '子任务：打包角色资产并上传至Shotgrid预览节点。',
     phase: '资产发布'
+  },
+  {
+    id: 'task-main-stub-1',
+    name: '新资产开发任务',
+    isMainTaskStub: true,
+    assignee: { name: '规划组', avatar: 'https://i.pravatar.cc/150?u=planning' },
+    status: '待处理',
+    priority: '中',
+    startDate: '2026-05-15T09:00:00Z',
+    deadline: '2026-05-30T18:00:00Z',
+    description: '这是一个新的主任务，尚未拆解。',
+    phase: '待拆解'
   }
 ];
 
@@ -169,7 +199,6 @@ const INITIAL_TASKS: Task[] = [
 interface BadgeProps {
   children: React.ReactNode;
   variant?: 'default' | '高' | '中' | '低';
-  key?: React.Key;
 }
 
 const Badge = ({ children, variant = 'default' }: BadgeProps) => {
@@ -189,42 +218,48 @@ const Badge = ({ children, variant = 'default' }: BadgeProps) => {
 interface TaskCardProps {
   task: Task;
   index: number;
-  key?: React.Key;
+  mainTask?: MainTask;
 }
 
-const TaskItem = ({ task, isOverdue }: { task: Task, isOverdue: boolean }) => (
+const TaskItem = ({ task, isOverdue, mainTask }: { task: Task, isOverdue: boolean, mainTask?: MainTask }) => (
   <>
-          <div className="flex justify-between mb-2">
-            <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono italic">
-              {task.id.split('-')[1].toUpperCase()}
-            </span>
-            <span className={cn(
-              "text-[10px] font-mono",
-              isOverdue ? "text-red-400" : "text-slate-400"
-            )}>
-              {isToday(new Date(task.deadline)) ? "今日" : "昨日"} {format(new Date(task.deadline), 'HH:mm')}
-            </span>
-          </div>
-          
-          <h4 className="text-sm font-bold text-slate-100 mb-1 line-clamp-1 group-hover:text-indigo-400 transition-colors uppercase tracking-tight">
-            {task.name}
-          </h4>
-          <p className="text-[11px] text-slate-500 line-clamp-2 mb-4 leading-relaxed">
-            {task.description}
-          </p>
-          <div className="flex items-center justify-between mt-auto">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 border border-slate-800 flex items-center justify-center overflow-hidden">
-                <img src={task.assignee.avatar} alt="" className="w-full h-full object-cover" />
-              </div>
-              <span className="text-[10px] text-slate-400 font-medium">{task.assignee.name}</span>
-            </div>
-            <Badge variant={task.priority as any}>{task.priority}</Badge>
-          </div>
+    <div className="flex justify-between mb-2">
+      {task.isMainTaskStub ? (
+        <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold italic bg-red-500/10 text-red-500">
+          <AlertTriangle size={10} /> 未拆解
+        </span>
+      ) : mainTask ? (
+        <span className="text-[10px] px-2 py-0.5 rounded font-bold italic bg-indigo-500/10 text-indigo-400">
+          {mainTask.name}
+        </span>
+      ) : null}
+      <span className={cn(
+        "text-[10px] font-mono",
+        isOverdue ? "text-red-400" : "text-slate-400"
+      )}>
+        {isToday(new Date(task.deadline)) ? "今日" : "昨日"} {format(new Date(task.deadline), 'HH:mm')}
+      </span>
+    </div>
+    
+    <h4 className="text-sm font-bold text-slate-100 mb-1 line-clamp-1 group-hover:text-indigo-400 transition-colors uppercase tracking-tight">
+      {task.name}
+    </h4>
+    <p className="text-[11px] text-slate-500 line-clamp-2 mb-4 leading-relaxed">
+      {task.description}
+    </p>
+    <div className="flex items-center justify-between mt-auto">
+      <div className="flex items-center gap-2">
+        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 border border-slate-800 flex items-center justify-center overflow-hidden">
+          <img src={task.assignee.avatar} alt="" className="w-full h-full object-cover" />
+        </div>
+        <span className="text-[10px] text-slate-400 font-medium">{task.assignee.name}</span>
+      </div>
+      <Badge variant={task.priority as any}>{task.priority}</Badge>
+    </div>
   </>
 );
 
-const TaskCard = ({ task, index }: TaskCardProps) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, index, mainTask }) => {
   const isOverdue = isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline)) && task.status !== '已完成';
   
   return (
@@ -241,7 +276,70 @@ const TaskCard = ({ task, index }: TaskCardProps) => {
             task.status === '已完成' && "opacity-50 grayscale-[0.5] border-l-emerald-500"
           )}
         >
-          <TaskItem task={task} isOverdue={isOverdue} />
+          <TaskItem task={task} isOverdue={isOverdue} mainTask={mainTask} />
+        </div>
+      )}
+    </Draggable>
+  );
+};
+
+const MainTaskCard: React.FC<{ 
+  task: Task, 
+  index: number, 
+  allTasks: Task[], 
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>,
+  openSplitTaskModal: (task: Task) => void 
+}> = ({ task, index, allTasks, setTasks, openSplitTaskModal }) => {
+  const subtasks = allTasks.filter(t => t.mainTaskId === task.id);
+  const isSplit = subtasks.length > 0;
+  const allCompleted = isSplit && subtasks.every(t => t.status === '已完成');
+
+  const handleCompleteMainTask = () => {
+    setTasks(prev => prev.map(t => 
+      t.id === task.id ? { ...t, status: '已完成' as const } : t
+    ));
+  };
+
+  return (
+    <Draggable draggableId={task.id} index={index}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          className={cn(
+            "group p-4 rounded-xl border transition-all cursor-pointer",
+            isSplit ? "bg-slate-800/40 border-slate-700/50" : "bg-red-950/20 border-red-900/30",
+            snapshot.isDragging && "shadow-2xl shadow-indigo-500/20 border-indigo-500/50 bg-slate-800 scale-[1.02]"
+          )}
+        >
+          <div className="flex justify-between items-start mb-2">
+            <h4 className={cn("text-sm font-bold line-clamp-1 uppercase tracking-tight", isSplit ? "text-slate-100" : "text-red-100")}>{task.name}</h4>
+            {isSplit && <span className="text-[10px] text-slate-400">{subtasks.filter(t => t.status === '已完成').length}/{subtasks.length} 子任务完成</span>}
+          </div>
+          <p className={cn("text-[11px] line-clamp-2 mb-4", isSplit ? "text-slate-400" : "text-red-500/70")}>{task.description}</p>
+          
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] text-slate-500 font-medium">截止: {format(new Date(task.deadline), 'MM-dd')}</div>
+            
+            {!isSplit && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); openSplitTaskModal(task); }}
+                  className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg text-[10px] font-bold transition-colors"
+                >
+                  快速拆解
+                </button>
+            )}
+
+            {isSplit && allCompleted && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleCompleteMainTask(); }}
+                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold transition-colors"
+                >
+                  完成主任务
+                </button>
+            )}
+          </div>
         </div>
       )}
     </Draggable>
@@ -377,14 +475,69 @@ const GanttView = ({ tasks }: { tasks: Task[] }) => {
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [mainTasks, setMainTasks] = useState<MainTask[]>(INITIAL_MAIN_TASKS);
   const [isReady, setIsReady] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [stubModalTask, setStubModalTask] = useState<Task | null>(null);
+  const [splitConfig, setSplitConfig] = useState({
+    numSubtasks: 1,
+    subtasks: [{ name: '', description: '', assignee: '', date: format(new Date(), 'yyyy-MM-dd') }]
+  });
+  
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'All'>('All');
   const [assigneeFilter, setAssigneeFilter] = useState<string | 'All'>('All');
   const [phaseFilter, setPhaseFilter] = useState<string | 'All'>('All');
+  const [showCompleted, setShowCompleted] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('Kanban');
   const [swimlaneGrouping, setSwimlaneGrouping] = useState<SwimlaneGrouping>('Phase');
   const [showConfig, setShowConfig] = useState(false);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [isPendingSplitExpanded, setIsPendingSplitExpanded] = useState(false);
+
+  const openSplitTaskModal = (task: Task) => {
+    let subtasks = [{ name: `${task.name}-子任务1`, description: task.description, assignee: task.assignee.name, date: format(new Date(), 'yyyy-MM-dd') }];
+    let numSubtasks = 1;
+
+    if (task.name.includes('资产模型') || task.description.includes('资产模型')) {
+        subtasks = [
+            { name: "AI生成多图", description: "根据概念设计生成多视角参考图", assignee: task.assignee.name, date: format(new Date(), 'yyyy-MM-dd') },
+            { name: "AI生成全身高模", description: "使用多视角图生成高精度3D模型", assignee: task.assignee.name, date: format(new Date(), 'yyyy-MM-dd') },
+            { name: "修复纹理", description: "修复模型表面的UV和纹理细节", assignee: task.assignee.name, date: format(new Date(), 'yyyy-MM-dd') }
+        ];
+        numSubtasks = 3;
+    }
+
+    setSplitConfig({
+        numSubtasks,
+        subtasks
+    });
+    setStubModalTask(task);
+  }
+
+  const pendingSplitTasks = tasks.filter(t => !t.mainTaskId);
+
+  const handleCreateSubtask = () => {
+    if (!stubModalTask) return;
+    
+    const newSubtasks: Task[] = splitConfig.subtasks.map((st, idx) => ({
+        id: `task-${Date.now()}-${Math.random()}`,
+        mainTaskId: stubModalTask.id,
+        name: st.name,
+        description: st.description,
+        assignee: { name: st.assignee, avatar: 'https://i.pravatar.cc/150?u=new' },
+        status: idx === 0 ? '进行中' : '待处理',
+        priority: '中',
+        startDate: st.date,
+        deadline: `${st.date}T18:00:00Z`,
+        phase: '制作中'
+    }));
+    
+    setTasks(prev => [
+      ...prev.filter(t => t.id !== stubModalTask.id), // Remove the stub
+      ...newSubtasks
+    ]);
+    setStubModalTask(null);
+  };
 
   // Fix for React Beautiful Dnd strict mode
   useEffect(() => {
@@ -397,7 +550,8 @@ export default function App() {
     const matchesPriority = priorityFilter === 'All' || t.priority === priorityFilter;
     const matchesAssignee = assigneeFilter === 'All' || t.assignee.name === assigneeFilter;
     const matchesPhase = phaseFilter === 'All' || t.phase === phaseFilter;
-    return matchesSearch && matchesPriority && matchesAssignee && matchesPhase;
+    const matchesCompleted = showCompleted || t.status !== '已完成';
+    return matchesSearch && matchesPriority && matchesAssignee && matchesPhase && matchesCompleted;
   });
 
   const assignees = Array.from(new Set(INITIAL_TASKS.map(t => t.assignee.name)));
@@ -415,13 +569,37 @@ export default function App() {
   const inApprovalTasks = filteredTasks.filter(t => t.status === '审批中');
   const completedTasks = filteredTasks.filter(t => t.status === '已完成');
 
+  const sortedTodoTasks = [...todoTasks].sort((a, b) => (a.mainTaskId || '').localeCompare(b.mainTaskId || ''));
+  const sortedInProgressTasks = [...inProgressTasks].sort((a, b) => (a.mainTaskId || '').localeCompare(b.mainTaskId || ''));
+  const sortedInApprovalTasks = [...inApprovalTasks].sort((a, b) => (a.mainTaskId || '').localeCompare(b.mainTaskId || ''));
+
   const overallProgress = (tasks.filter(t => t.status === '已完成').length / tasks.length) * 100;
+
+  const groupTasksByMainTask = (ts: Task[]) => {
+    const groups: Record<string, { mainTask: MainTask | undefined, tasks: Task[] }> = {};
+    
+    ts.forEach(task => {
+      const mtId = task.mainTaskId || 'uncategorized';
+      if (!groups[mtId]) {
+        groups[mtId] = {
+          mainTask: mainTasks.find(mt => mt.id === mtId),
+          tasks: []
+        };
+      }
+      groups[mtId].tasks.push(task);
+    });
+    
+    return groups;
+  };
 
   const onDragEnd = useCallback((result: DropResult) => {
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+    
+    // Find task from current state
+    const draggedTask = tasks.find(t => t.id === draggableId);
 
     // Logic: Drag to status zones
     if (destination.droppableId === 'completed-zone') {
@@ -429,6 +607,10 @@ export default function App() {
         t.id === draggableId ? { ...t, status: '已完成' as const } : t
       ));
     } else if (destination.droppableId === 'in-progress-zone') {
+      if (draggedTask?.isMainTaskStub) {
+        openSplitTaskModal(draggedTask);
+        return;
+      }
       setTasks(prev => prev.map(t => 
         t.id === draggableId ? { ...t, status: '进行中' as const } : t
       ));
@@ -441,12 +623,76 @@ export default function App() {
         t.id === draggableId ? { ...t, status: '待处理' as const } : t
       ));
     }
-  }, []);
+  }, [tasks]);
 
   if (!isReady) return null;
 
   return (
     <div className="w-full h-screen bg-slate-950 text-slate-200 flex flex-col font-sans overflow-hidden">
+      {stubModalTask && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
+             <h2 className="text-xl font-bold text-white mb-4">拆解主任务: {stubModalTask.name}</h2>
+             
+             <div className="mb-4">
+               <label className="text-xs text-slate-400">拆解为几个子任务 (1-10)</label>
+               <input 
+                 type="number" 
+                 min="1" 
+                 max="10" 
+                 className="w-full bg-slate-950 border border-slate-700 p-3 rounded-xl text-white" 
+                 value={splitConfig.numSubtasks} 
+                 onChange={e => {
+                     const val = parseInt(e.target.value);
+                     const numSubtasks = Math.min(10, Math.max(1, val || 1));
+                     const newSubtasks = [...splitConfig.subtasks];
+                     while(newSubtasks.length < numSubtasks) {
+                         newSubtasks.push({ name: `${stubModalTask.name}-子任务${newSubtasks.length + 1}`, description: stubModalTask.description, assignee: stubModalTask.assignee.name, date: format(new Date(), 'yyyy-MM-dd') });
+                     }
+                     if (newSubtasks.length > numSubtasks) {
+                         newSubtasks.splice(numSubtasks);
+                     }
+                     setSplitConfig({ numSubtasks, subtasks: newSubtasks });
+                 }} 
+               />
+             </div>
+             
+             <div className="space-y-4 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                {splitConfig.subtasks.map((st, i) => (
+                    <div key={i} className="bg-slate-950 p-3 rounded-lg border border-slate-800">
+                        <input type="text" placeholder="子任务名称" className="w-full bg-slate-900 border border-slate-700 p-2 rounded mb-2 text-sm text-white" value={st.name} onChange={e => {                
+                            const newSubtasks = [...splitConfig.subtasks];
+                            newSubtasks[i].name = e.target.value;                
+                            setSplitConfig({ ...splitConfig, subtasks: newSubtasks });
+                        }} />
+                        <input type="text" placeholder="描述" className="w-full bg-slate-900 border border-slate-700 p-2 rounded mb-2 text-sm text-white" value={st.description} onChange={e => {
+                            const newSubtasks = [...splitConfig.subtasks];
+                            newSubtasks[i].description = e.target.value;                
+                            setSplitConfig({ ...splitConfig, subtasks: newSubtasks });
+                        }} />
+                        <div className="flex gap-2">
+                             <input type="text" placeholder="责任人" className="w-1/2 bg-slate-900 border border-slate-700 p-2 rounded text-sm text-white" value={st.assignee} onChange={e => {
+                                const newSubtasks = [...splitConfig.subtasks];
+                                newSubtasks[i].assignee = e.target.value;                
+                                setSplitConfig({ ...splitConfig, subtasks: newSubtasks });
+                             }} />
+                             <input type="date" className="w-1/2 bg-slate-900 border border-slate-700 p-2 rounded text-sm text-white" value={st.date} onChange={e => {
+                                const newSubtasks = [...splitConfig.subtasks];
+                                newSubtasks[i].date = e.target.value;                
+                                setSplitConfig({ ...splitConfig, subtasks: newSubtasks });
+                             }} />
+                        </div>
+                    </div>
+                ))}
+             </div>
+
+             <div className="flex gap-4 mt-4">
+               <button className="flex-1 px-4 py-2 bg-slate-700 rounded-xl" onClick={() => setStubModalTask(null)}>取消</button>
+               <button className="flex-1 px-4 py-2 bg-indigo-600 rounded-xl" onClick={handleCreateSubtask}>拆解并创建</button>
+             </div>
+          </div>
+        </div>
+      )}
       {showConfig && <PipelineConfig onClose={() => setShowConfig(false)} />}
       {/* Header */}
       <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 shrink-0 z-50">
@@ -542,63 +788,111 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            {viewMode === 'Swimlane' && (
-              <div className="flex bg-slate-950 border border-slate-800 p-1 rounded-xl">
-                 {(['Phase', 'Assignee'] as SwimlaneGrouping[]).map((g) => (
-                    <button
-                      key={g}
-                      onClick={() => setSwimlaneGrouping(g)}
-                      className={cn(
-                        "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
-                        swimlaneGrouping === g ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30" : "text-slate-500 hover:text-slate-400 hover:bg-slate-900"
-                      )}
-                    >
-                      {g === 'Phase' ? '按步骤' : '按负责人'}
-                    </button>
-                 ))}
+          <div className="flex items-center gap-4 relative">
+            <button
+               onClick={() => setFilterMenuOpen(!filterMenuOpen)}
+               className={cn(
+                 "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+                 filterMenuOpen ? "bg-indigo-600 text-white" : "bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200"
+               )}
+            >
+               筛选
+            </button>
+
+            {filterMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-2xl z-50">
+                 <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-bold uppercase mb-2 block">完成状态</label>
+                      <button 
+                        onClick={() => setShowCompleted(!showCompleted)}
+                        className={cn("w-full px-3 py-2 rounded-xl text-xs", showCompleted ? "bg-indigo-900 text-indigo-200" : "bg-slate-950 text-slate-400")}
+                      >
+                        {showCompleted ? "隐藏已完成" : "显示已完成"}
+                      </button>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-bold uppercase mb-2 block">筛选步骤</label>
+                      <select 
+                        value={phaseFilter}
+                        onChange={(e) => setPhaseFilter(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-300"
+                      >
+                        <option value="All">全部步骤</option>
+                        {phases.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-bold uppercase mb-2 block">筛选人员</label>
+                      <select 
+                        value={assigneeFilter}
+                        onChange={(e) => setAssigneeFilter(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-300"
+                      >
+                        <option value="All">全部人员</option>
+                        {assignees.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-500 font-bold uppercase mb-2 block">筛选优先级</label>
+                      <div className="flex bg-slate-950 border border-slate-800 p-1 rounded-xl">
+                        {(['All', '高', '中', '低'] as const).map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => setPriorityFilter(p)}
+                            className={cn(
+                              "flex-1 px-2 py-1.5 rounded-lg text-[10px] font-bold transition-all",
+                              priorityFilter === p ? "bg-indigo-600 text-white" : "text-slate-500 hover:text-slate-400"
+                            )}
+                          >
+                            {p === 'All' ? '全部' : p}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                 </div>
               </div>
             )}
-            {/* Phase Selector */}
-            <select 
-              value={phaseFilter}
-              onChange={(e) => setPhaseFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-300 focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
-            >
-              <option value="All">全部步骤</option>
-              {phases.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-
-            {/* Assignee Selector */}
-            <select 
-              value={assigneeFilter}
-              onChange={(e) => setAssigneeFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-300 focus:outline-none focus:border-indigo-500/50 transition-all appearance-none cursor-pointer"
-            >
-              <option value="All">全部人员</option>
-              {assignees.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-
-            <div className="flex bg-slate-950 border border-slate-800 p-1 rounded-xl">
-              {(['All', '高', '中', '低'] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPriorityFilter(p)}
-                  className={cn(
-                    "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
-                    priorityFilter === p ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30" : "text-slate-500 hover:text-slate-400 hover:bg-slate-900"
-                  )}
-                >
-                  {p === 'All' ? '优先级' : p}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
         {viewMode === 'Kanban' && (
-          <div className="flex-1 grid grid-cols-6 gap-6 overflow-hidden">
-            <DragDropContext onDragEnd={onDragEnd}>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <div className="flex-1 grid grid-cols-7 gap-6 overflow-hidden">
+            {/* Pending Split Column */}
+            <section className={cn(
+                "bg-slate-900/50 rounded-2xl border border-red-900/30 flex flex-col overflow-hidden transition-all duration-300",
+                isPendingSplitExpanded ? "col-span-1" : "min-w-[40px] w-[40px] items-center cursor-pointer"
+            )} onClick={() => !isPendingSplitExpanded && setIsPendingSplitExpanded(true)}>
+                <div className={cn("p-4 border-b border-red-900/20 bg-red-950/20 flex flex-col items-center gap-4", isPendingSplitExpanded ? "flex-row justify-between" : "justify-center")} onClick={isPendingSplitExpanded ? () => setIsPendingSplitExpanded(false) : undefined}>
+                    <h2 className={cn("text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2", isPendingSplitExpanded ? "flex-row" : "flex-col [writing-mode:vertical-rl]")}>
+                        <AlertTriangle size={14} />
+                        {isPendingSplitExpanded && "主任务"}
+                    </h2>
+                    {isPendingSplitExpanded && <span className="px-2 py-0.5 bg-red-900 text-red-200 text-[10px] rounded-full font-bold">{pendingSplitTasks.length}</span>}
+                    {!isPendingSplitExpanded && pendingSplitTasks.length > 0 && <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>}
+                </div>
+                {isPendingSplitExpanded && (
+                  <Droppable droppableId="pending-split">
+                    {(provided, snapshot) => (
+                      <div 
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={cn(
+                          "flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar transition-all duration-300",
+                          snapshot.isDraggingOver && "bg-red-500/[0.05]"
+                        )}
+                      >
+                        {pendingSplitTasks.map((task, idx) => (
+                          <MainTaskCard key={task.id} task={task} index={idx} allTasks={tasks} setTasks={setTasks} openSplitTaskModal={openSplitTaskModal} />
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                )}
+            </section>
+            
               {/* Overdue Bento Column */}
               <section className="bg-slate-900/30 rounded-2xl border border-dashed border-red-900/30 flex flex-col overflow-hidden group hover:bg-red-500/[0.02] transition-colors">
                 <div className="p-4 border-b border-red-900/20 bg-red-950/20 flex justify-between items-center">
@@ -620,7 +914,7 @@ export default function App() {
                       )}
                     >
                       {overdueTasks.map((task, idx) => (
-                        <TaskCard key={task.id} task={task} index={idx} />
+                        <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} />
                       ))}
                       {provided.placeholder}
                     </div>
@@ -648,10 +942,20 @@ export default function App() {
                         snapshot.isDraggingOver && "bg-indigo-500/[0.02]"
                       )}
                     >
-                      {todoTasks.length > 0 ? (
-                        todoTasks.map((task, idx) => (
-                          <TaskCard key={task.id} task={task} index={idx} />
-                        ))
+                      {sortedTodoTasks.length > 0 ? (
+                        sortedTodoTasks.map((task, idx) => {
+                          const isNewGroup = idx === 0 || task.mainTaskId !== sortedTodoTasks[idx-1].mainTaskId;
+                          return (
+                            <React.Fragment key={task.id}>
+                              {isNewGroup && (
+                                <div className="col-span-1 mt-4 text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2">
+                                  {mainTasks.find(mt => mt.id === task.mainTaskId)?.name || '未分组'}
+                                </div>
+                              )}
+                              <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} />
+                            </React.Fragment>
+                          );
+                        })
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center opacity-20 text-center">
                           <LayoutGrid size={48} strokeWidth={1} />
@@ -684,7 +988,19 @@ export default function App() {
                         snapshot.isDraggingOver && "bg-amber-500/[0.02]"
                       )}
                     >
-                      {inProgressTasks.map((task, idx) => <TaskCard key={task.id} task={task} index={idx} />)}
+                      {sortedInProgressTasks.map((task, idx) => {
+                          const isNewGroup = idx === 0 || task.mainTaskId !== sortedInProgressTasks[idx-1].mainTaskId;
+                          return (
+                            <React.Fragment key={task.id}>
+                              {isNewGroup && (
+                                <div className="col-span-2 mt-4 text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2">
+                                  {mainTasks.find(mt => mt.id === task.mainTaskId)?.name || '未分组'}
+                                </div>
+                              )}
+                              <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} />
+                            </React.Fragment>
+                          );
+                      })}
                       {provided.placeholder}
                     </div>
                   )}
@@ -711,7 +1027,19 @@ export default function App() {
                         snapshot.isDraggingOver && "bg-blue-500/[0.02]"
                       )}
                     >
-                      {inApprovalTasks.map((task, idx) => <TaskCard key={task.id} task={task} index={idx} />)}
+                      {sortedInApprovalTasks.map((task, idx) => {
+                          const isNewGroup = idx === 0 || task.mainTaskId !== sortedInApprovalTasks[idx-1].mainTaskId;
+                          return (
+                            <React.Fragment key={task.id}>
+                              {isNewGroup && (
+                                <div className="col-span-1 mt-4 text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2">
+                                  {mainTasks.find(mt => mt.id === task.mainTaskId)?.name || '未分组'}
+                                </div>
+                              )}
+                              <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} />
+                            </React.Fragment>
+                          );
+                      })}
                       {provided.placeholder}
                     </div>
                   )}
@@ -785,8 +1113,8 @@ export default function App() {
                   )}
                 </Droppable>
               </section>
-            </DragDropContext>
-          </div>
+            </div>
+          </DragDropContext>
         )}
         {viewMode === 'Gantt' && <GanttView tasks={filteredTasks} />}
         {viewMode === 'Swimlane' && <SwimlaneView tasks={filteredTasks} grouping={swimlaneGrouping} />}
