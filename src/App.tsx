@@ -43,7 +43,7 @@ import { PipelineConfig } from './components/PipelineConfig';
 
 type Priority = '高' | '中' | '低';
 type TaskStatus = '待处理' | '进行中' | '已完成' | '审批中';
-type ViewMode = 'Kanban' | 'Gantt' | 'Swimlane';
+type ViewMode = 'Kanban' | 'Gantt' | 'Swimlane' | 'List';
 type SwimlaneGrouping = 'Phase' | 'Assignee';
 
 type MainTaskStatus = '进行中' | '已完成';
@@ -79,118 +79,154 @@ interface Task {
 // --- Mock Data ---
 
 const INITIAL_TASKS: Task[] = [
+  // 主任务1: 未拆解
   {
-    id: 'task-1',
-    mainTaskId: 'mt-1',
-    name: '主角雕刻 - 面部表情细节 (Day 1)',
+    id: 'mt-1',
+    name: '主角交互特效',
+    isMainTaskStub: true,
     assignee: { name: '陈晓东', avatar: 'https://i.pravatar.cc/150?u=alex' },
+    status: '待处理',
+    priority: '高',
+    startDate: '2026-05-12T09:00:00Z',
+    deadline: '2026-05-15T18:00:00Z',
+    description: '核心交互机制研究与落地。',
+    phase: '模型雕刻'
+  },
+  // 主任务2: 已拆解
+  {
+    id: 'mt-2',
+    name: '全场景材质映射',
+    isMainTaskStub: false,
+    assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
     status: '进行中',
     priority: '高',
-    startDate: '2026-05-06T09:00:00Z',
-    deadline: '2026-05-07T18:00:00Z',
-    description: '子任务：完成嘴角与眼角皱纹的高模细节。需支持后续表情融合。',
+    startDate: '2026-05-06T10:00:00Z',
+    deadline: '2026-05-10T14:00:00Z',
+    description: '全场景材质烘培与渲染设置。',
     phase: '模型雕刻'
   },
   {
-    id: 'task-6',
+    id: 'task-2-1',
     mainTaskId: 'mt-2',
-    name: '反派拓扑 - 关节区域重布线',
+    name: '环境光遮蔽烘焙',
     assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
     status: '进行中',
     priority: '高',
     startDate: '2026-05-06T10:00:00Z',
     deadline: '2026-05-07T14:00:00Z',
-    description: '子任务：修复膝关节处极点布线，确保形变伸缩比。',
-    phase: '拓扑优化'
+    description: '子任务：计算环境光遮蔽贴图。',
+    phase: '材质绘制'
   },
   {
-    id: 'task-7',
-    name: '资产自检 - 命名审计',
+    id: 'task-2-2',
+    mainTaskId: 'mt-2',
+    name: '材质球映射',
     assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
-    status: '待处理',
-    priority: '低',
-    startDate: '2026-05-07T08:00:00Z',
-    deadline: '2026-05-07T10:00:00Z',
-    description: '子任务：核对所有UDIM象限命名规范。',
-    phase: '资产发布'
-  },
-  {
-    id: 'task-2',
-    name: '次要角色拓扑 - 肢体优化',
-    assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
     status: '待处理',
     priority: '中',
-    startDate: '2026-05-07T14:00:00Z',
-    deadline: '2026-05-08T17:00:00Z',
-    description: '子任务：优化网格结构以减少动画渲染开销。',
+    startDate: '2026-05-07T08:00:00Z',
+    deadline: '2026-05-08T18:00:00Z',
+    description: '子任务：将材质球应用至模型。',
+    phase: '材质绘制'
+  },
+  // 新增: 主任务3: 未拆解
+  {
+    id: 'mt-3',
+    name: '武器特效开发',
+    isMainTaskStub: true,
+    assignee: { name: '王小云', avatar: 'https://i.pravatar.cc/150?u=emily' },
+    status: '待处理',
+    priority: '中',
+    startDate: '2026-05-13T09:00:00Z',
+    deadline: '2026-05-20T18:00:00Z',
+    description: '基础打击特效开发。',
+    phase: '特效制作'
+  },
+  // 新增: 主任务4: 已拆解
+  {
+    id: 'mt-4',
+    name: '反派拓扑优化',
+    isMainTaskStub: false,
+    assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
+    status: '待处理',
+    priority: '高',
+    startDate: '2026-05-13T09:00:00Z',
+    deadline: '2026-05-20T18:00:00Z',
+    description: '优化反派角色网格结构。',
     phase: '拓扑优化'
   },
   {
-    id: 'task-3',
-    name: '反派UV - UDIM象限展开',
+    id: 'task-4-1',
+    mainTaskId: 'mt-4',
+    name: '关节区域重布线',
     assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
-    status: '进行中',
+    status: '待处理',
     priority: '高',
-    startDate: '2026-05-08T09:00:00Z',
-    deadline: '2026-05-08T20:00:00Z',
-    description: '子任务：展开前2个UV象限，满足8K绘制精度。',
-    phase: 'UV展开'
+    startDate: '2026-05-13T09:00:00Z',
+    deadline: '2026-05-15T18:00:00Z',
+    description: '优化关节形变。',
+    phase: '拓扑优化'
   },
   {
-    id: 'task-4',
-    name: '毛发理算 - 物理动力学调优',
+    id: 'task-4-2',
+    mainTaskId: 'mt-4',
+    name: '面部拓扑修正',
+    assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
+    status: '待处理',
+    priority: '中',
+    startDate: '2026-05-13T09:00:00Z',
+    deadline: '2026-05-16T18:00:00Z',
+    description: '修正面部表情布线。',
+    phase: '拓扑优化'
+  },
+  // 新增: 主任务5: 已拆解 (多子任务示例)
+  {
+    id: 'mt-5',
+    name: '环境增强特效',
+    isMainTaskStub: false,
     assignee: { name: '王小云', avatar: 'https://i.pravatar.cc/150?u=emily' },
     status: '进行中',
-    priority: '低',
-    startDate: '2026-05-08T08:00:00Z',
-    deadline: '2026-05-08T16:00:00Z',
-    description: '子任务：优化步行模式下的长发遮蔽与碰撞。',
-    phase: '毛发制作'
+    priority: '中',
+    startDate: '2026-05-13T09:00:00Z',
+    deadline: '2026-05-25T18:00:00Z',
+    description: '环境氛围增强特效集成。',
+    phase: '特效制作'
   },
   {
-    id: 'task-8',
-    name: '道具B贴图 - 基础纹理层',
+    id: 'task-5-1',
+    mainTaskId: 'mt-5',
+    name: '粒子效果优化',
+    assignee: { name: '王小云', avatar: 'https://i.pravatar.cc/150?u=emily' },
+    status: '进行中',
+    priority: '高',
+    startDate: '2026-05-13T09:00:00Z',
+    deadline: '2026-05-18T18:00:00Z',
+    description: '提升复杂粒子计算效率。',
+    phase: '特效制作'
+  },
+  {
+    id: 'task-5-2',
+    mainTaskId: 'mt-5',
+    name: '光影交互集成',
     assignee: { name: '陈晓东', avatar: 'https://i.pravatar.cc/150?u=alex' },
     status: '待处理',
-    priority: '高',
-    startDate: '2026-05-08T13:00:00Z',
-    deadline: '2026-05-08T22:00:00Z',
-    description: '子任务：建立Substance智能材质球基础属性。',
-    phase: '材质绘制'
-  },
-  {
-    id: 'task-5',
-    name: '主角贴图 - 法线烘培校对',
-    assignee: { name: '张子明', avatar: 'https://i.pravatar.cc/150?u=sarah' },
-    status: '已完成',
     priority: '中',
-    startDate: '2026-05-08T08:00:00Z',
-    deadline: '2026-05-08T10:00:00Z',
-    description: '子任务：烘培法线贴图并核对黑边与硬边。',
-    phase: '材质绘制'
+    startDate: '2026-05-14T09:00:00Z',
+    deadline: '2026-05-20T18:00:00Z',
+    description: '灯光与特效联动系统。',
+    phase: '后端逻辑'
   },
   {
-    id: 'task-9',
-    name: '资产打包 - 版本提交 0.2',
+    id: 'task-5-3',
+    mainTaskId: 'mt-5',
+    name: '碰撞边界测试',
     assignee: { name: '李瑞', avatar: 'https://i.pravatar.cc/150?u=mike' },
-    status: '已完成',
-    priority: '低',
-    startDate: '2026-05-07T16:00:00Z',
-    deadline: '2026-05-08T09:00:00Z',
-    description: '子任务：打包角色资产并上传至Shotgrid预览节点。',
-    phase: '资产发布'
-  },
-  {
-    id: 'task-main-stub-1',
-    name: '新资产开发任务',
-    isMainTaskStub: true,
-    assignee: { name: '规划组', avatar: 'https://i.pravatar.cc/150?u=planning' },
     status: '待处理',
-    priority: '中',
+    priority: '低',
     startDate: '2026-05-15T09:00:00Z',
-    deadline: '2026-05-30T18:00:00Z',
-    description: '这是一个新的主任务，尚未拆解。',
-    phase: '待拆解'
+    deadline: '2026-05-22T18:00:00Z',
+    description: '测试特效与场景碰撞边界。',
+    phase: '特效测试'
   }
 ];
 
@@ -219,48 +255,75 @@ interface TaskCardProps {
   task: Task;
   index: number;
   mainTask?: MainTask;
+  tasks: Task[];
+  isTodoColumn?: boolean;
 }
 
-const TaskItem = ({ task, isOverdue, mainTask }: { task: Task, isOverdue: boolean, mainTask?: MainTask }) => (
-  <>
-    <div className="flex justify-between mb-2">
-      {task.isMainTaskStub ? (
-        <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold italic bg-red-500/10 text-red-500">
-          <AlertTriangle size={10} /> 未拆解
-        </span>
-      ) : mainTask ? (
-        <span className="text-[10px] px-2 py-0.5 rounded font-bold italic bg-indigo-500/10 text-indigo-400">
-          {mainTask.name}
-        </span>
-      ) : null}
-      <span className={cn(
-        "text-[10px] font-mono",
-        isOverdue ? "text-red-400" : "text-slate-400"
-      )}>
-        {isToday(new Date(task.deadline)) ? "今日" : "昨日"} {format(new Date(task.deadline), 'HH:mm')}
-      </span>
-    </div>
-    
-    <h4 className="text-sm font-bold text-slate-100 mb-1 line-clamp-1 group-hover:text-indigo-400 transition-colors uppercase tracking-tight">
-      {task.name}
-    </h4>
-    <p className="text-[11px] text-slate-500 line-clamp-2 mb-4 leading-relaxed">
-      {task.description}
-    </p>
-    <div className="flex items-center justify-between mt-auto">
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 border border-slate-800 flex items-center justify-center overflow-hidden">
-          <img src={task.assignee.avatar} alt="" className="w-full h-full object-cover" />
-        </div>
-        <span className="text-[10px] text-slate-400 font-medium">{task.assignee.name}</span>
-      </div>
-      <Badge variant={task.priority as any}>{task.priority}</Badge>
-    </div>
-  </>
-);
+const TaskItem = ({ task, isOverdue, subtasks }: { task: Task, isOverdue: boolean, subtasks?: Task[] }) => {
+  const hasSubtasks = subtasks && subtasks.length > 0;
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, index, mainTask }) => {
+  return (
+    <>
+      <div className="flex justify-between mb-3">
+        {task.isMainTaskStub ? (
+          <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold italic bg-red-500/10 text-red-500">
+            <AlertTriangle size={10} /> 未拆解
+          </span>
+        ) : hasSubtasks ? (
+          <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-indigo-500/10 text-indigo-400">
+            已拆解 (主任务)
+          </span>
+        ) : !task.mainTaskId ? (
+          <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-800 text-slate-400">
+            主任务
+          </span>
+        ) : null}
+        <span className={cn("text-[10px] font-mono", isOverdue ? "text-red-400" : "text-slate-400")}>
+          {isToday(new Date(task.deadline)) ? "今日" : "昨日"} {format(new Date(task.deadline), 'HH:mm')}
+        </span>
+      </div>
+      
+      <h4 className="text-sm font-bold text-slate-100 mb-2 line-clamp-1 uppercase tracking-tight flex items-center gap-2">
+          {task.name} <Badge variant={task.priority as any}>{task.priority}</Badge>
+      </h4>
+      
+      <p className="text-[11px] text-slate-500 line-clamp-2 mb-4 leading-relaxed">
+          {task.description}
+      </p>
+      
+      <div className="flex items-center gap-2 mb-4">
+           <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 border border-slate-800 flex items-center justify-center overflow-hidden">
+              <img src={task.assignee.avatar} alt="" className="w-full h-full object-cover" />
+           </div>
+           <span className="text-[10px] text-slate-400 font-medium">{task.assignee.name}</span>
+      </div>
+
+      {hasSubtasks && (
+          <div className="border-t border-slate-700/50 pt-3 mt-2 space-y-2">
+              {subtasks.map(st => (
+                  <div key={st.id} className="group flex items-center text-[11px] gap-3 bg-slate-950/50 p-2 rounded-lg border border-slate-800 hover:border-slate-600 transition-colors">
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-600 group-hover:bg-indigo-400" />
+                      <span className="flex-1 truncate text-slate-300 group-hover:text-white font-medium">{st.name}</span>
+                      <span className="text-slate-500 font-mono text-[10px]">{format(new Date(st.deadline), 'MM-dd')}</span>
+                      <img src={st.assignee.avatar} className="w-4 h-4 rounded-full border border-slate-700" alt="" />
+                  </div>
+              ))}
+              <button className="text-[10px] text-indigo-400 font-bold flex items-center gap-1 mt-2 hover:text-indigo-300 transition-colors">
+                  <Plus size={10} /> 添加子任务
+              </button>
+          </div>
+      )}
+    </>
+  );
+};
+
+const TaskCard: React.FC<TaskCardProps> = ({ task, index, mainTask, tasks, isTodoColumn }) => {
   const isOverdue = isPast(new Date(task.deadline)) && !isToday(new Date(task.deadline)) && task.status !== '已完成';
+  
+  // Robustly identify main tasks based on subtasks or stub status, only if in Todo column
+  const subtasks = isTodoColumn ? tasks.filter(t => t.mainTaskId === task.id) : [];
+  const isMainTask = isTodoColumn && (subtasks.length > 0 || task.isMainTaskStub);
+
   
   return (
     <Draggable draggableId={task.id} index={index}>
@@ -270,13 +333,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, mainTask }) => {
           {...provided.draggableProps}
           {...provided.dragHandleProps}
           className={cn(
-            "group relative p-4 mb-3 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-all duration-200 shadow-lg",
+            "group relative p-4 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-all duration-200 shadow-lg",
             isOverdue ? "border-l-4 border-l-red-500" : "border-l-4 border-l-indigo-500",
             snapshot.isDragging && "shadow-2xl shadow-indigo-500/20 border-indigo-500/50 bg-slate-800 scale-[1.02] z-50",
             task.status === '已完成' && "opacity-50 grayscale-[0.5] border-l-emerald-500"
           )}
         >
-          <TaskItem task={task} isOverdue={isOverdue} mainTask={mainTask} />
+          <TaskItem task={task} isOverdue={isOverdue} subtasks={isTodoColumn && isMainTask ? subtasks : undefined} />
         </div>
       )}
     </Draggable>
@@ -473,12 +536,79 @@ const GanttView = ({ tasks }: { tasks: Task[] }) => {
   );
 };
 
+const ListView = ({ tasks }: { tasks: Task[] }) => {
+  const mainTasks = tasks.filter(t => !t.mainTaskId);
+  
+  return (
+    <div className="flex-1 bg-slate-900 border border-slate-800 rounded-2xl p-6 overflow-x-auto overflow-y-auto custom-scrollbar">
+      <table className="w-full text-xs text-left whitespace-nowrap">
+        <thead className="text-slate-500 uppercase tracking-widest font-bold border-b border-slate-800">
+          <tr>
+            <th className="pb-4 pr-4">任务标识 (ID)</th>
+            <th className="pb-4 pr-4">任务名称</th>
+            <th className="pb-4 pr-4">任务类型</th>
+            <th className="pb-4 pr-4">资产类型</th>
+            <th className="pb-4 pr-4">关联实体</th>
+            <th className="pb-4 pr-4">任务状态</th>
+            <th className="pb-4 pr-4">过程状态</th>
+            <th className="pb-4 pr-4">优先级</th>
+            <th className="pb-4 pr-4">责任人</th>
+            <th className="pb-4 pr-4">参与人</th>
+            <th className="pb-4 pr-4">审核人</th>
+            <th className="pb-4 pr-4">任务开始时间</th>
+            <th className="pb-4 pr-4">计划完成时间</th>
+            <th className="pb-4 pr-4">超时时间</th>
+            <th className="pb-4 pr-4">预估工时</th>
+            <th className="pb-4 pr-4">实际工时</th>
+            <th className="pb-4 pr-4">项目名称</th>
+            <th className="pb-4 pr-4">项目状态</th>
+            <th className="pb-4 pr-4">项目导演</th>
+            <th className="pb-4 pr-4">项目负责人</th>
+            <th className="pb-4 pr-4">创建人</th>
+          </tr>
+        </thead>
+        <tbody className="text-slate-300">
+          {mainTasks.map(task => (
+            <tr key={task.id} className="border-b border-slate-800 hover:bg-slate-800/20">
+              <td className="py-4 pr-4 font-mono text-slate-500">{task.id}</td>
+              <td className="py-4 pr-4 font-bold text-slate-100">{task.name}</td>
+              <td className="py-4 pr-4">生产任务</td>
+              <td className="py-4 pr-4">-</td>
+              <td className="py-4 pr-4">-</td>
+              <td className="py-4 pr-4"><Badge variant="default">{task.status}</Badge></td>
+              <td className="py-4 pr-4">{task.phase}</td>
+              <td className="py-4 pr-4"><Badge variant={task.priority as any}>{task.priority}</Badge></td>
+              <td className="py-4 pr-4 flex items-center gap-2">
+                 <img src={task.assignee.avatar} className="w-5 h-5 rounded-full border border-slate-700" alt="" />
+                 {task.assignee.name}
+              </td>
+              <td className="py-4 pr-4">-</td>
+              <td className="py-4 pr-4">-</td>
+              <td className="py-4 pr-4 font-mono">{format(new Date(task.startDate), 'MM-dd')}</td>
+              <td className="py-4 pr-4 font-mono">{format(new Date(task.deadline), 'MM-dd')}</td>
+              <td className="py-4 pr-4 font-mono">-</td>
+              <td className="py-4 pr-4 font-mono">-</td>
+              <td className="py-4 pr-4 font-mono">-</td>
+              <td className="py-4 pr-4">角色特效工程</td>
+              <td className="py-4 pr-4">进行中</td>
+              <td className="py-4 pr-4">张导演</td>
+              <td className="py-4 pr-4">李项目</td>
+              <td className="py-4 pr-4">系统</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
   const [mainTasks, setMainTasks] = useState<MainTask[]>(INITIAL_MAIN_TASKS);
   const [isReady, setIsReady] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [stubModalTask, setStubModalTask] = useState<Task | null>(null);
+  const [taskSelectionModal, setTaskSelectionModal] = useState<{ result: DropResult, subtasks: Task[] } | null>(null);
   const [splitConfig, setSplitConfig] = useState({
     numSubtasks: 1,
     subtasks: [{ name: '', description: '', assignee: '', date: format(new Date(), 'yyyy-MM-dd') }]
@@ -493,6 +623,7 @@ export default function App() {
   const [showConfig, setShowConfig] = useState(false);
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [isPendingSplitExpanded, setIsPendingSplitExpanded] = useState(false);
+  const [isOverdueExpanded, setIsOverdueExpanded] = useState(false);
 
   const openSplitTaskModal = (task: Task) => {
     let subtasks = [{ name: `${task.name}-子任务1`, description: task.description, assignee: task.assignee.name, date: format(new Date(), 'yyyy-MM-dd') }];
@@ -611,6 +742,14 @@ export default function App() {
         openSplitTaskModal(draggedTask);
         return;
       }
+      
+      // Check for main task (has subtasks)
+      const subtasks = tasks.filter(t => t.mainTaskId === draggedTask?.id);
+      if (subtasks.length > 0) {
+        setTaskSelectionModal({ result, subtasks });
+        return;
+      }
+
       setTasks(prev => prev.map(t => 
         t.id === draggableId ? { ...t, status: '进行中' as const } : t
       ));
@@ -629,6 +768,33 @@ export default function App() {
 
   return (
     <div className="w-full h-screen bg-slate-950 text-slate-200 flex flex-col font-sans overflow-hidden">
+      {taskSelectionModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+             <h2 className="text-lg font-bold text-white mb-4">选择任务到今日制作</h2>
+             <p className="text-xs text-slate-400 mb-4">任务已拆解，请选择要移动的子任务，或创建新子任务：</p>
+             <div className="space-y-2 mb-6">
+                {taskSelectionModal.subtasks.map(st => (
+                  <button 
+                     key={st.id}
+                     className="w-full text-left p-3 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/50 text-sm text-slate-300"
+                     onClick={() => {
+                        setTasks(prev => prev.map(t => t.id === st.id ? { ...t, status: '进行中' as const } : t));
+                        setTaskSelectionModal(null);
+                     }}
+                  >
+                    {st.name}
+                  </button>
+                ))}
+             </div>
+             
+             <div className="flex flex-col gap-2">
+                <button className="w-full px-4 py-2 bg-indigo-600 rounded-xl text-xs font-bold text-white hover:bg-indigo-500">创建新子任务</button>
+                <button className="w-full px-4 py-2 bg-slate-700 rounded-xl text-xs font-bold text-white" onClick={() => setTaskSelectionModal(null)}>取消</button>
+             </div>
+          </div>
+        </div>
+      )}
       {stubModalTask && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
@@ -718,7 +884,7 @@ export default function App() {
         {/* Migrated Overview Info */}
         <div className="hidden lg:flex items-center gap-8 pl-8 ml-8 border-l border-slate-800">
            <div className="flex bg-slate-950/80 border border-slate-800 p-1 rounded-xl">
-              {(['Kanban', 'Gantt', 'Swimlane'] as const).map((mode) => (
+              {(['Kanban', 'Gantt', 'Swimlane', 'List'] as const).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
@@ -727,8 +893,8 @@ export default function App() {
                     viewMode === mode ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30" : "text-slate-500 hover:text-slate-400"
                   )}
                 >
-                  {mode === 'Kanban' ? <LayoutGrid size={12} /> : mode === 'Gantt' ? <Calendar size={12} /> : <Columns size={12} />}
-                  {mode === 'Kanban' ? '看板管理' : mode === 'Gantt' ? '环节甘特图' : '泳道视图'}
+                  {mode === 'Kanban' ? <LayoutGrid size={12} /> : mode === 'Gantt' ? <Calendar size={12} /> : mode === 'Swimlane' ? <Columns size={12} /> : <Layers size={12} />}
+                  {mode === 'Kanban' ? '看板管理' : mode === 'Gantt' ? '环节甘特图' : mode === 'Swimlane' ? '泳道视图' : '列表视图'}
                 </button>
               ))}
            </div>
@@ -748,7 +914,7 @@ export default function App() {
                 />
              </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 border-l border-slate-800 pl-6">
              <div className="text-center">
                 <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">延期</p>
                 <p className="text-xs font-mono font-bold text-red-500">{tasks.filter(t => isPast(new Date(t.deadline)) && !isToday(new Date(t.deadline)) && t.status !== '已完成').length}</p>
@@ -758,34 +924,17 @@ export default function App() {
                 <p className="text-xs font-mono font-bold text-emerald-500">{tasks.filter(t => t.status === '已完成').length}</p>
              </div>
           </div>
-        </div>
-
-        <div className="flex items-center gap-6 ml-auto">
-          <div className="text-right hidden sm:block">
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">工作节点</p>
-            <p className="text-xs font-medium text-indigo-400">ASSET-SVR-CHARACTER-PROD</p>
-          </div>
-          <div className="w-10 h-10 rounded-full border border-slate-700 bg-slate-800 flex items-center justify-center overflow-hidden shadow-inner">
-            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-500" />
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
-        {/* Minimal Filter Bar */}
-        <div className="flex items-center justify-between shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
-          <div className="flex items-center gap-6">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={14} />
-              <input 
-                type="text" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="搜索子任务或资产序号..." 
-                className="bg-slate-950 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-xs w-64 focus:outline-none focus:border-indigo-500/50 transition-all font-medium placeholder:text-slate-700"
-              />
-            </div>
+          <div className="flex items-center gap-6 border-l border-slate-800 pl-6">
+             <div className="relative group">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" size={14} />
+               <input 
+                 type="text" 
+                 value={searchQuery}
+                 onChange={(e) => setSearchQuery(e.target.value)}
+                 placeholder="搜索子任务或资产序号..." 
+                 className="bg-slate-950 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-xs w-64 focus:outline-none focus:border-indigo-500/50 transition-all font-medium placeholder:text-slate-700"
+               />
+             </div>
           </div>
 
           <div className="flex items-center gap-4 relative">
@@ -856,35 +1005,49 @@ export default function App() {
           </div>
         </div>
 
+        <div className="flex items-center gap-6 ml-auto">
+          <div className="text-right hidden sm:block">
+          </div>
+          <div className="w-10 h-10 rounded-full border border-slate-700 bg-slate-800 flex items-center justify-center overflow-hidden shadow-inner">
+            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-500" />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
         {viewMode === 'Kanban' && (
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex-1 grid grid-cols-7 gap-6 overflow-hidden">
-            {/* Pending Split Column */}
-            <section className={cn(
-                "bg-slate-900/50 rounded-2xl border border-red-900/30 flex flex-col overflow-hidden transition-all duration-300",
-                isPendingSplitExpanded ? "col-span-1" : "min-w-[40px] w-[40px] items-center cursor-pointer"
-            )} onClick={() => !isPendingSplitExpanded && setIsPendingSplitExpanded(true)}>
-                <div className={cn("p-4 border-b border-red-900/20 bg-red-950/20 flex flex-col items-center gap-4", isPendingSplitExpanded ? "flex-row justify-between" : "justify-center")} onClick={isPendingSplitExpanded ? () => setIsPendingSplitExpanded(false) : undefined}>
-                    <h2 className={cn("text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-2", isPendingSplitExpanded ? "flex-row" : "flex-col [writing-mode:vertical-rl]")}>
-                        <AlertTriangle size={14} />
-                        {isPendingSplitExpanded && "主任务"}
-                    </h2>
-                    {isPendingSplitExpanded && <span className="px-2 py-0.5 bg-red-900 text-red-200 text-[10px] rounded-full font-bold">{pendingSplitTasks.length}</span>}
-                    {!isPendingSplitExpanded && pendingSplitTasks.length > 0 && <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>}
+            
+            {/* Collapsible Overdue Area */}
+            <section className={cn("rounded-2xl border border-dashed border-red-900/30 flex flex-col overflow-hidden transition-all duration-300", isOverdueExpanded ? "max-h-[300px]" : "max-h-[50px]")}>
+                <div 
+                    className="p-4 border-b border-red-900/20 bg-red-950/20 flex justify-between items-center cursor-pointer hover:bg-red-950/30"
+                    onClick={() => setIsOverdueExpanded(!isOverdueExpanded)}
+                >
+                  <h2 className="text-xs font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
+                    <History size={14} />
+                    逾期遗留项
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-red-900 text-red-200 text-[10px] rounded-full font-bold">{overdueTasks.length}</span>
+                    <ChevronRight size={14} className={cn("text-red-500 transition-transform", isOverdueExpanded ? "rotate-90" : "")} />
+                  </div>
                 </div>
-                {isPendingSplitExpanded && (
-                  <Droppable droppableId="pending-split">
+              
+                {isOverdueExpanded && (
+                  <Droppable droppableId="overdue">
                     {(provided, snapshot) => (
                       <div 
                         ref={provided.innerRef}
                         {...provided.droppableProps}
                         className={cn(
-                          "flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar transition-all duration-300",
+                          "flex-1 p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto custom-scrollbar transition-all duration-300",
                           snapshot.isDraggingOver && "bg-red-500/[0.05]"
                         )}
                       >
-                        {pendingSplitTasks.map((task, idx) => (
-                          <MainTaskCard key={task.id} task={task} index={idx} allTasks={tasks} setTasks={setTasks} openSplitTaskModal={openSplitTaskModal} />
+                        {overdueTasks.map((task, idx) => (
+                          <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} tasks={tasks} />
                         ))}
                         {provided.placeholder}
                       </div>
@@ -892,36 +1055,8 @@ export default function App() {
                   </Droppable>
                 )}
             </section>
-            
-              {/* Overdue Bento Column */}
-              <section className="bg-slate-900/30 rounded-2xl border border-dashed border-red-900/30 flex flex-col overflow-hidden group hover:bg-red-500/[0.02] transition-colors">
-                <div className="p-4 border-b border-red-900/20 bg-red-950/20 flex justify-between items-center">
-                  <h2 className="text-xs font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
-                    <History size={14} />
-                    逾期遗留项
-                  </h2>
-                  <span className="px-2 py-0.5 bg-red-900 text-red-200 text-[10px] rounded-full font-bold">{overdueTasks.length}</span>
-                </div>
-              
-                <Droppable droppableId="overdue">
-                  {(provided, snapshot) => (
-                    <div 
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={cn(
-                        "flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar transition-all duration-300",
-                        snapshot.isDraggingOver && "bg-red-500/[0.05]"
-                      )}
-                    >
-                      {overdueTasks.map((task, idx) => (
-                        <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} />
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
-              </section>
 
+            <div className="flex-1 grid grid-cols-5 gap-6 overflow-hidden">
               {/* Todo Bento Column */}
               <section className="bg-slate-900 rounded-2xl border border-slate-800 flex flex-col overflow-hidden shadow-2xl relative">
                 <div className="p-4 border-b border-slate-800 bg-slate-800/30 flex justify-between items-center">
@@ -944,16 +1079,11 @@ export default function App() {
                     >
                       {sortedTodoTasks.length > 0 ? (
                         sortedTodoTasks.map((task, idx) => {
-                          const isNewGroup = idx === 0 || task.mainTaskId !== sortedTodoTasks[idx-1].mainTaskId;
+                          // Only render main tasks (that are not subtasks)
+                          if (task.mainTaskId) return null;
+                          
                           return (
-                            <React.Fragment key={task.id}>
-                              {isNewGroup && (
-                                <div className="col-span-1 mt-4 text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2">
-                                  {mainTasks.find(mt => mt.id === task.mainTaskId)?.name || '未分组'}
-                                </div>
-                              )}
-                              <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} />
-                            </React.Fragment>
+                            <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} tasks={tasks} isTodoColumn={true} />
                           );
                         })
                       ) : (
@@ -984,21 +1114,18 @@ export default function App() {
                       ref={provided.innerRef}
                       {...provided.droppableProps}
                       className={cn(
-                        "flex-1 p-4 grid grid-cols-2 gap-4 overflow-y-auto custom-scrollbar transition-all duration-300",
+                        "flex-1 p-4 space-y-4 overflow-y-auto custom-scrollbar transition-all duration-300",
                         snapshot.isDraggingOver && "bg-amber-500/[0.02]"
                       )}
                     >
                       {sortedInProgressTasks.map((task, idx) => {
-                          const isNewGroup = idx === 0 || task.mainTaskId !== sortedInProgressTasks[idx-1].mainTaskId;
+                          const hasSubtasks = tasks.some(t => t.mainTaskId === task.id);
+
+                          // Only render main tasks (that are not subtasks)
+                          if (task.mainTaskId) return null;
+                          
                           return (
-                            <React.Fragment key={task.id}>
-                              {isNewGroup && (
-                                <div className="col-span-2 mt-4 text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2">
-                                  {mainTasks.find(mt => mt.id === task.mainTaskId)?.name || '未分组'}
-                                </div>
-                              )}
-                              <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} />
-                            </React.Fragment>
+                            <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} tasks={tasks} />
                           );
                       })}
                       {provided.placeholder}
@@ -1028,16 +1155,11 @@ export default function App() {
                       )}
                     >
                       {sortedInApprovalTasks.map((task, idx) => {
-                          const isNewGroup = idx === 0 || task.mainTaskId !== sortedInApprovalTasks[idx-1].mainTaskId;
+                          // Only render main tasks (that are not subtasks)
+                          if (task.mainTaskId) return null;
+                          
                           return (
-                            <React.Fragment key={task.id}>
-                              {isNewGroup && (
-                                <div className="col-span-1 mt-4 text-[10px] font-bold text-slate-500 uppercase flex items-center gap-2">
-                                  {mainTasks.find(mt => mt.id === task.mainTaskId)?.name || '未分组'}
-                                </div>
-                              )}
-                              <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} />
-                            </React.Fragment>
+                            <TaskCard key={task.id} task={task} index={idx} mainTask={mainTasks.find(mt => mt.id === task.mainTaskId)} tasks={tasks} />
                           );
                       })}
                       {provided.placeholder}
@@ -1118,6 +1240,7 @@ export default function App() {
         )}
         {viewMode === 'Gantt' && <GanttView tasks={filteredTasks} />}
         {viewMode === 'Swimlane' && <SwimlaneView tasks={filteredTasks} grouping={swimlaneGrouping} />}
+        {viewMode === 'List' && <ListView tasks={filteredTasks} />}
       </main>
 
       {/* Footer Bar */}
